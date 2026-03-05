@@ -330,6 +330,14 @@ a{color:inherit}
   outline: 3px solid #7cc8ffcc;
   outline-offset: 2px;
 }
+.ship.sunk{
+  border-color:#7a0000cc;
+  background:
+    radial-gradient(20px 10px at 25% 35%, #ffffff26, transparent 60%),
+    radial-gradient(18px 10px at 60% 62%, #ffffff1a, transparent 60%),
+    linear-gradient(180deg, #9f1010, #620707 65%, #3f0303);
+  box-shadow: 0 0 0 2px #ff4d4d55, 0 14px 30px #3a0202aa;
+}
 
 .rotateHandle{
   position:absolute;

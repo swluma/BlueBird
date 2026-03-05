@@ -703,12 +703,13 @@
     },
 
     renderShipLayer(layerEl, player, opts) {
-      const { selectable, selectedShipId, onShipClick } = opts;
+      const { selectable, selectedShipId, onShipClick, sunkShipIds } = opts;
       layerEl.innerHTML = '';
       for (const ship of player.ships) {
         const shipEl = el('div', 'ship');
         shipEl.classList.add(ship.orient === 'H' ? 'h' : 'v');
         if (ship.id === selectedShipId) shipEl.classList.add('selected');
+        if (sunkShipIds && sunkShipIds.has(ship.id)) shipEl.classList.add('sunk');
 
         // Position in percent to stay responsive.
         const w = ship.orient === 'H' ? ship.len : 1;
@@ -843,7 +844,16 @@
       this.renderCellsFromDefense(this.els.ownBoard, cur);
 
       // Render ships on own board (only when visible)
-      this.renderShipLayer(this.els.ownShipLayer, cur, { selectable: false });
+      const ownFleet = this.getFleetStatus(cur);
+      const ownSunkShipIds = new Set(
+        Object.entries(ownFleet)
+          .filter(([, st]) => st.sunk)
+          .map(([shipId]) => shipId)
+      );
+      this.renderShipLayer(this.els.ownShipLayer, cur, {
+        selectable: false,
+        sunkShipIds: ownSunkShipIds
+      });
       this.els.ownShipLayer.style.opacity = s.ui.play.ownVisible ? '1' : '0';
 
       // Render hints:
