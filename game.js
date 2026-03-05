@@ -1516,7 +1516,8 @@
       // force reflow
       void cell.offsetWidth;
       cell.classList.add(cls);
-      setTimeout(() => cell.classList.remove(cls), 1200);
+      const durationMs = cls === 'reviveAnim' ? 3000 : 1200;
+      setTimeout(() => cell.classList.remove(cls), durationMs);
     },
 
     toast(text, type = 'good', big = false) {

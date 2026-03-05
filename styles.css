@@ -225,11 +225,24 @@ a{color:inherit}
   text-shadow: 0 0 16px #ffd54dcc;
 }
 .cell.reviveAnim{
-  animation: reviveCell 1.4s ease forwards;
+  animation: reviveCell 3s ease-out forwards;
+}
+.cell.reviveAnim::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:#fff;
+  opacity:1;
+  pointer-events:none;
+  animation: reviveCellOverlay 3s linear forwards;
 }
 @keyframes reviveCell{
-  0%{filter:brightness(1.25)}
+  0%{filter:brightness(1.35)}
   100%{filter:brightness(1)}
+}
+@keyframes reviveCellOverlay{
+  0%{opacity:1}
+  100%{opacity:0}
 }
 
 .cell.shake{
