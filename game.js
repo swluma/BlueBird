@@ -257,6 +257,7 @@
         resultSmall: $('#resultSmall'),
         resultBig: $('#resultBig'),
         resultEffect: $('#resultEffect'),
+        resultContinueBtn: $('#resultContinueBtn'),
 
         toast: $('#toast'),
 
@@ -1313,18 +1314,22 @@
         this.els.resultBig.textContent = '—';
         this.els.resultBig.style.color = 'var(--text)';
         this.els.resultEffect.textContent = '';
+        this.els.resultContinueBtn.classList.add('hidden');
+        this.els.resultContinueBtn.disabled = true;
         this.els.resultOverlay.classList.remove('hidden');
 
         setTimeout(() => {
           this.els.resultBig.textContent = bigText;
           this.els.resultBig.style.color = color;
           this.els.resultEffect.textContent = effectText;
-
-          // close after a short moment
-          setTimeout(() => {
+          this.els.resultContinueBtn.disabled = false;
+          this.els.resultContinueBtn.classList.remove('hidden');
+          this.els.resultContinueBtn.focus();
+          this.els.resultContinueBtn.onclick = () => {
+            this.els.resultContinueBtn.onclick = null;
             this.els.resultOverlay.classList.add('hidden');
             resolve();
-          }, 1700);
+          };
         }, 1600);
       });
     },
