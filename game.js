@@ -297,7 +297,7 @@
       this.els.confirmShotBtn.addEventListener('click', () => this.confirmShot());
 
       this.els.readyBtn.addEventListener('click', () => this.onReady());
-      this.els.forfeitBtn.addEventListener('click', () => this.endGame('Game ended.'));
+      this.els.forfeitBtn.addEventListener('click', () => this.confirmEndGame());
 
       this.els.restartBtn.addEventListener('click', () => window.location.reload());
       this.els.effectsInfoBtn.addEventListener('click', () => this.openInfoOverlay('effectsInfoOverlay'));
@@ -1598,6 +1598,12 @@
       this.els.gameOverTitle.textContent = title;
       this.els.gameOverBody.textContent = body;
       this.els.gameOverOverlay.classList.remove('hidden');
+    },
+
+    confirmEndGame() {
+      const shouldEnd = window.confirm('End the current game?');
+      if (!shouldEnd) return;
+      this.endGame('Game ended.');
     },
 
     endGame(msg) {
