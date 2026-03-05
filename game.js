@@ -200,6 +200,12 @@
         phasePill: $('#phasePill'),
         timerPill: $('#timerPill'),
         timerText: $('#timerText'),
+        effectsInfoBtn: $('#effectsInfoBtn'),
+        flowInfoBtn: $('#flowInfoBtn'),
+        effectsInfoOverlay: $('#effectsInfoOverlay'),
+        flowInfoOverlay: $('#flowInfoOverlay'),
+        closeEffectsInfoBtn: $('#closeEffectsInfoBtn'),
+        closeFlowInfoBtn: $('#closeFlowInfoBtn'),
 
         startPanel: $('#startPanel'),
         setupPanel: $('#setupPanel'),
@@ -294,12 +300,43 @@
       this.els.forfeitBtn.addEventListener('click', () => this.endGame('Game ended.'));
 
       this.els.restartBtn.addEventListener('click', () => window.location.reload());
+      this.els.effectsInfoBtn.addEventListener('click', () => this.openInfoOverlay('effectsInfoOverlay'));
+      this.els.flowInfoBtn.addEventListener('click', () => this.openInfoOverlay('flowInfoOverlay'));
+      this.els.closeEffectsInfoBtn.addEventListener('click', () => this.closeInfoOverlay('effectsInfoOverlay'));
+      this.els.closeFlowInfoBtn.addEventListener('click', () => this.closeInfoOverlay('flowInfoOverlay'));
+
+      this.els.effectsInfoOverlay.addEventListener('click', (ev) => {
+        if (ev.target === this.els.effectsInfoOverlay) this.closeInfoOverlay('effectsInfoOverlay');
+      });
+      this.els.flowInfoOverlay.addEventListener('click', (ev) => {
+        if (ev.target === this.els.flowInfoOverlay) this.closeInfoOverlay('flowInfoOverlay');
+      });
 
       window.addEventListener('resize', () => {
         if (!this.state) return;
         if (this.state.phase === TurnPhase.SETUP) this.renderSetup();
         if (this.state.phase === TurnPhase.PLAY) this.renderPlay();
       });
+      window.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Escape') this.closeInfoOverlays();
+      });
+    },
+
+    openInfoOverlay(id) {
+      const overlay = this.els[id];
+      if (!overlay) return;
+      overlay.classList.remove('hidden');
+    },
+
+    closeInfoOverlay(id) {
+      const overlay = this.els[id];
+      if (!overlay) return;
+      overlay.classList.add('hidden');
+    },
+
+    closeInfoOverlays() {
+      this.closeInfoOverlay('effectsInfoOverlay');
+      this.closeInfoOverlay('flowInfoOverlay');
     },
 
     // Panels

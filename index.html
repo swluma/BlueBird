@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -10,18 +10,24 @@
   <div id="app">
     <header class="topbar">
       <div class="brand">
-        <div class="logo">⛴️</div>
+        <div class="logo">â›´ï¸</div>
         <div>
           <div class="title">Battleship Bluff</div>
           <div class="subtitle">Pass-and-play mindgame Battleship</div>
         </div>
       </div>
 
-      <div class="status">
-        <div class="pill" id="phasePill">Ready</div>
-        <div class="pill timer" id="timerPill" title="Turn timer">
-          <span>⏱</span>
-          <span id="timerText">--</span>
+      <div class="topbarRight">
+        <div class="status">
+          <div class="pill" id="phasePill">Ready</div>
+          <div class="pill timer" id="timerPill" title="Turn timer">
+            <span>â±</span>
+            <span id="timerText">--</span>
+          </div>
+        </div>
+        <div class="infoBtns">
+          <button class="btn infoBtn" id="effectsInfoBtn" type="button">Hint Effects</button>
+          <button class="btn infoBtn" id="flowInfoBtn" type="button">How to Play</button>
         </div>
       </div>
     </header>
@@ -209,11 +215,86 @@
     <!-- RESULT OVERLAY -->
     <div class="modalOverlay hidden" id="resultOverlay" aria-modal="true" role="dialog">
       <div class="modal">
-        <div class="resultSmall" id="resultSmall">The result is…</div>
-        <div class="resultBig" id="resultBig">—</div>
-        <div class="resultEffect" id="resultEffect">—</div>
+        <div class="resultSmall" id="resultSmall">The result isâ€¦</div>
+        <div class="resultBig" id="resultBig">â€”</div>
+        <div class="resultEffect" id="resultEffect">â€”</div>
         <div class="modalActions">
           <button class="btn primary hidden" id="resultContinueBtn">Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- INFO: EFFECTS -->
+    <div class="modalOverlay hidden" id="effectsInfoOverlay" aria-modal="true" role="dialog" aria-labelledby="effectsInfoTitle">
+      <div class="modal infoModal">
+        <div class="modalTitle" id="effectsInfoTitle">Hint Effects (TRUE / LIE)</div>
+        <div class="modalBody infoBody">
+          <p>
+            A player may place one hint per turn on their own board. The attacker can guess if that hint is TRUE or a LIE.
+            Effects depend on the real truth and the attacker's guess.
+          </p>
+          <div class="infoTableWrap">
+            <table class="infoTable">
+              <thead>
+                <tr>
+                  <th>Real hint</th>
+                  <th>Attacker guess</th>
+                  <th>Effect</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>TRUE</td>
+                  <td>TRUE</td>
+                  <td>No effect.</td>
+                </tr>
+                <tr>
+                  <td>TRUE</td>
+                  <td>LIE</td>
+                  <td>Defender revives about one-third of destroyed non-ship cells.</td>
+                </tr>
+                <tr>
+                  <td>LIE</td>
+                  <td>TRUE</td>
+                  <td>Defender gains +1 extra shot next turn.</td>
+                </tr>
+                <tr>
+                  <td>LIE</td>
+                  <td>LIE</td>
+                  <td>A forced correct hint is added for the defender.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modalActions">
+          <button class="btn primary" id="closeEffectsInfoBtn" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- INFO: INTRO / FLOW -->
+    <div class="modalOverlay hidden" id="flowInfoOverlay" aria-modal="true" role="dialog" aria-labelledby="flowInfoTitle">
+      <div class="modal infoModal">
+        <div class="modalTitle" id="flowInfoTitle">Introduction &amp; Game Flow</div>
+        <div class="modalBody infoBody">
+          <p>
+            Battleship Bluff is a pass-and-play game for two players. You place fleets, attack hidden targets, and add bluff hints
+            that can change the next turns.
+          </p>
+          <ol class="infoList">
+            <li>Setup: each player places ships (length 5, 4, 3, 3, 2), then locks in and passes.</li>
+            <li>Turn start: current player receives base shots (plus any bonus).</li>
+            <li>Optional hint: before the first shot, reveal your own board and place one hint card.</li>
+            <li>Attack: choose a target cell on the opponent board.</li>
+            <li>If an incoming hint is active, attacker guesses TRUE or LIE, confirms, then effects are applied.</li>
+            <li>Shot resolves as hit or miss. Hits can grant extra shots if enabled.</li>
+            <li>When shots end, pass device to the next player.</li>
+            <li>Game ends when one side sinks all enemy ships, or if someone ends the game.</li>
+          </ol>
+        </div>
+        <div class="modalActions">
+          <button class="btn primary" id="closeFlowInfoBtn" type="button">Close</button>
         </div>
       </div>
     </div>
@@ -225,7 +306,7 @@
     <div class="modalOverlay hidden" id="gameOverOverlay" aria-modal="true" role="dialog">
       <div class="modal">
         <div class="modalTitle" id="gameOverTitle">Game Over</div>
-        <div class="modalBody" id="gameOverBody">—</div>
+        <div class="modalBody" id="gameOverBody">â€”</div>
         <div class="modalActions">
           <button class="btn" id="restartBtn">Restart</button>
         </div>
@@ -237,3 +318,5 @@
   <script src="game.js"></script>
 </body>
 </html>
+
+
