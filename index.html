@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Battleship Bluff</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">⛴️</div>
+        <div>
+          <div class="title">Battleship Bluff</div>
+          <div class="subtitle">Pass-and-play mindgame Battleship</div>
+        </div>
+      </div>
+
+      <div class="status">
+        <div class="pill" id="phasePill">Ready</div>
+        <div class="pill timer" id="timerPill" title="Turn timer">
+          <span>⏱</span>
+          <span id="timerText">--</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="main">
+      <!-- START -->
+      <section class="panel" id="startPanel">
+        <h1>New Game</h1>
+        <p class="muted">
+          Place your fleet, then take turns attacking. Before you shoot, you may place one hint on <b>your own</b> board for your opponent.
+          Hints can be <b>true or a bluff</b>.
+        </p>
+        <div class="options">
+          <label class="opt">
+            <span>Turn timer (seconds)</span>
+            <input id="turnTimerInput" type="number" min="15" max="180" value="60" />
+          </label>
+          <label class="opt">
+            <span>Hit = extra shot</span>
+            <input id="extraShotToggle" type="checkbox" checked />
+          </label>
+        </div>
+        <button class="btn primary" id="startBtn">Start</button>
+        <p class="tiny muted">
+          English UI only. Works offline. Best on a phone in landscape.
+        </p>
+      </section>
+
+      <!-- SETUP -->
+      <section class="panel hidden" id="setupPanel">
+        <div class="panelHead">
+          <div>
+            <h2 id="setupTitle">Place your fleet</h2>
+            <div class="muted" id="setupSubtitle">Tap a ship, then tap the board to place it. Tap a placed ship to select it.</div>
+          </div>
+          <div class="setupActions">
+            <button class="btn" id="randomBtn">Random Place</button>
+            <button class="btn danger" id="resetBtn">Reset</button>
+          </div>
+        </div>
+
+        <div class="setupGrid">
+          <div class="card panelCard">
+            <div class="cardTitle">Ships</div>
+            <div class="shipPalette" id="shipPalette"></div>
+            <div class="hint muted tiny">
+              Tip: Tap a placed ship to select it. A rotate button (curved arrow) appears near its top-right corner.
+              Tap another cell to move the selected ship.
+            </div>
+          </div>
+
+          <div class="card panelCard">
+            <div class="cardTitle">Player Board</div>
+            <div class="boardWrap">
+              <div class="boardFrame" id="setupBoardFrame">
+                <div class="boardGrid" id="setupBoard"></div>
+                <div class="overlayLayer" id="setupHintLayer"></div>
+                <div class="shipLayer" id="setupShipLayer"></div>
+                <button class="rotateHandle hidden" id="setupRotateHandle" title="Rotate selected ship" aria-label="Rotate">
+                  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                    <path d="M12 6V3L8 7l4 4V8c2.76 0 5 2.24 5 5a5 5 0 1 1-9.9-1h-2.1A7 7 0 1 0 12 6z" />
+                  </svg>
+                </button>
+              </div>
+
+              <div class="legend" id="setupLegend">
+                <span class="legendItem"><span class="swatch sw-ship"></span> Ship</span>
+                <span class="legendItem"><span class="swatch sw-outline"></span> Selected</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="footerRow">
+          <div class="muted tiny" id="setupReadyText">Place all ships to continue.</div>
+          <button class="btn primary" id="lockInBtn" disabled>Lock In &amp; Pass</button>
+        </div>
+      </section>
+
+      <!-- PLAY -->
+      <section class="panel hidden" id="playPanel">
+        <div class="panelHead">
+          <div>
+            <h2 id="turnTitle">Player 1's Turn</h2>
+            <div class="muted" id="turnSubtitle">Select a target cell. If a hint is active, guess TRUE or LIE, then confirm.</div>
+          </div>
+          <div class="playBadges">
+            <div class="pill">Shots: <b id="shotsText">1</b></div>
+            <div class="pill">Hints left: <b id="hintsLeftText">4</b></div>
+          </div>
+        </div>
+
+        <div class="playGrid">
+          <div class="card panelCard">
+            <div class="cardTitle">Target Board (Opponent)</div>
+
+            <div class="boardWrap">
+              <div class="boardFrame" id="targetBoardFrame">
+                <div class="boardGrid" id="targetBoard"></div>
+                <div class="overlayLayer" id="targetHintLayer"></div>
+              </div>
+
+              <div class="legend">
+                <div class="legendRow">
+                  <span class="legendItem"><span class="swatch sw-active-has"></span> Active hint: HAS</span>
+                  <span class="legendItem"><span class="swatch sw-active-hasnot"></span> Active hint: HAS NOT</span>
+                </div>
+                <div class="legendRow">
+                  <span class="legendItem"><span class="swatch sw-past-has"></span> Past hint (correct): HAS</span>
+                  <span class="legendItem"><span class="swatch sw-past-hasnot"></span> Past hint (correct): HAS NOT</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="enemyStatus">
+              <div class="enemyTitle">Enemy ships remaining</div>
+              <div id="enemyShips"></div>
+            </div>
+          </div>
+
+          <div class="card panelCard">
+            <div class="cardTitle">Your Board</div>
+
+            <div class="boardWrap">
+              <div class="boardFrame" id="ownBoardFrame">
+                <div class="boardGrid" id="ownBoard"></div>
+                <div class="overlayLayer" id="ownHintLayer"></div>
+                <div class="shipLayer" id="ownShipLayer"></div>
+
+                <div class="hideOverlay" id="ownHideOverlay">
+                  <button class="btn primary" id="showOwnBtn">SHOW</button>
+                </div>
+
+                <button class="btn tinyBtn hidden" id="hideOwnBtn">Hide</button>
+              </div>
+
+              <div class="muted tiny" id="ownHintTruthText">Select a hint card to place one hint (optional, once per turn).</div>
+
+              <div class="hintControls">
+                <div class="toggle" role="group" aria-label="Has / Has not">
+                  <button class="toggleBtn active" id="toggleHasBtn">HAS</button>
+                  <button class="toggleBtn" id="toggleHasNotBtn">HAS NOT</button>
+                </div>
+
+                <button class="btn" id="confirmHintBtn" disabled>Confirm Hint</button>
+              </div>
+
+              <div class="cardsRow" id="cardsRow"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="guessBar hidden" id="guessBar">
+          <div class="guessInfo">
+            <div class="guessTitle">Opponent's hint is active</div>
+            <div class="guessDesc" id="incomingHintDesc">Make your guess, then confirm your shot.</div>
+          </div>
+
+          <div class="guessBtns">
+            <button class="btn" id="guessTrueBtn">TRUE</button>
+            <button class="btn" id="guessLieBtn">LIE</button>
+            <button class="btn primary" id="confirmShotBtn" disabled>Confirm Shot</button>
+          </div>
+        </div>
+
+        <div class="footerRow">
+          <div class="muted tiny" id="logLine">Pick a target cell.</div>
+          <button class="btn danger" id="forfeitBtn">End Game</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- PASS OVERLAY -->
+    <div class="modalOverlay hidden" id="passOverlay" aria-modal="true" role="dialog">
+      <div class="modal">
+        <div class="modalTitle" id="passTitle">Pass Device</div>
+        <div class="modalBody" id="passBody">Hand the device to the next player and keep the screen hidden.</div>
+        <button class="btn primary" id="readyBtn">I'm ready</button>
+      </div>
+    </div>
+
+    <!-- RESULT OVERLAY -->
+    <div class="modalOverlay hidden" id="resultOverlay" aria-modal="true" role="dialog">
+      <div class="modal">
+        <div class="resultSmall" id="resultSmall">The result is…</div>
+        <div class="resultBig" id="resultBig">—</div>
+        <div class="resultEffect" id="resultEffect">—</div>
+      </div>
+    </div>
+
+    <!-- TOAST / FX -->
+    <div class="toast hidden" id="toast"></div>
+
+    <!-- GAME OVER -->
+    <div class="modalOverlay hidden" id="gameOverOverlay" aria-modal="true" role="dialog">
+      <div class="modal">
+        <div class="modalTitle" id="gameOverTitle">Game Over</div>
+        <div class="modalBody" id="gameOverBody">—</div>
+        <div class="modalActions">
+          <button class="btn" id="restartBtn">Restart</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
