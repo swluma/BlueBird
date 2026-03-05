@@ -116,6 +116,11 @@ a{color:inherit}
   background:#0b1228aa;
   min-width:260px;
 }
+.optInline{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
 .opt input[type="number"]{
   width:90px;
   padding:8px 10px;
@@ -126,6 +131,10 @@ a{color:inherit}
   outline:none;
 }
 .opt input[type="checkbox"]{transform:scale(1.1)}
+.btn.toggleOn{
+  background: linear-gradient(180deg, #1d88ff, #0f5fd6);
+  border-color:#4aa7ff55;
+}
 
 .btn{
   border:1px solid var(--line);

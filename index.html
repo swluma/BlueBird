@@ -35,10 +35,13 @@
           Hints can be <b>true or a bluff</b>.
         </p>
         <div class="options">
-          <label class="opt">
+          <div class="opt">
             <span>Turn timer (seconds)</span>
-            <input id="turnTimerInput" type="number" min="15" max="180" value="60" />
-          </label>
+            <div class="optInline">
+              <input id="turnTimerInput" type="number" min="15" max="180" value="60" />
+              <button class="btn" id="timerToggleBtn" type="button">Timer Off</button>
+            </div>
+          </div>
           <label class="opt">
             <span>Hit = extra shot</span>
             <input id="extraShotToggle" type="checkbox" checked />

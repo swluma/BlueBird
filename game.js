@@ -185,9 +185,12 @@
     init() {
       this.cacheEls();
       this.bind();
+      this.startTimerEnabled = false;
+      this.renderStartTimerOption();
 
       this.showPanel('#startPanel');
       this.setPhasePill('Ready');
+      this.els.timerPill.classList.add('hidden');
 
       this.renderStaticBoards();
     },
@@ -204,6 +207,7 @@
 
         startBtn: $('#startBtn'),
         turnTimerInput: $('#turnTimerInput'),
+        timerToggleBtn: $('#timerToggleBtn'),
         extraShotToggle: $('#extraShotToggle'),
 
         // Setup
@@ -270,6 +274,7 @@
 
     bind() {
       this.els.startBtn.addEventListener('click', () => this.startGame());
+      this.els.timerToggleBtn.addEventListener('click', () => this.setTimerEnabled(!this.startTimerEnabled));
       this.els.randomBtn.addEventListener('click', () => this.randomPlace());
       this.els.resetBtn.addEventListener('click', () => this.resetPlacement());
       this.els.lockInBtn.addEventListener('click', () => this.lockIn());
@@ -310,6 +315,18 @@
     },
 
     // Game state
+    setTimerEnabled(enabled) {
+      this.startTimerEnabled = !!enabled;
+      this.renderStartTimerOption();
+    },
+
+    renderStartTimerOption() {
+      const enabled = !!this.startTimerEnabled;
+      this.els.timerToggleBtn.textContent = enabled ? 'Timer On' : 'Timer Off';
+      this.els.timerToggleBtn.classList.toggle('toggleOn', enabled);
+      this.els.turnTimerInput.disabled = !enabled;
+    },
+
     newPlayerState() {
       return {
         ships: [], // {id,len,origin,orient}
@@ -327,11 +344,12 @@
 
     startGame() {
       const turnSeconds = clamp(parseInt(this.els.turnTimerInput.value || '60', 10), 15, 180);
+      const timerEnabled = !!this.startTimerEnabled;
       const extraShotOnHit = !!this.els.extraShotToggle.checked;
 
       this.state = {
         phase: TurnPhase.SETUP,
-        config: { turnSeconds, extraShotOnHit },
+        config: { turnSeconds, timerEnabled, extraShotOnHit },
         setupPlayer: 0,
         currentPlayer: 0,
         players: [this.newPlayerState(), this.newPlayerState()],
@@ -754,6 +772,10 @@
       this.stopTurnTimer();
       const s = this.state;
       if (!s || s.phase !== TurnPhase.PLAY) return;
+      if (!s.config.timerEnabled) {
+        this.els.timerPill.classList.add('hidden');
+        return;
+      }
 
       s.turn.paused = false;
       this.els.timerPill.classList.remove('hidden');
