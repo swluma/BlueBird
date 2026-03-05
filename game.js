@@ -688,7 +688,8 @@
       }
     },
 
-    renderCellsFromTarget(gridEl, attacker) {
+    renderCellsFromTarget(gridEl, attacker, defender = null) {
+      const sunkCellKeys = defender ? this.getSunkCellKeySet(defender) : null;
       const cells = gridEl.querySelectorAll('.cell');
       for (const b of cells) {
         const r = parseInt(b.dataset.r, 10);
@@ -696,6 +697,8 @@
         const s = attacker.targetShots[r][c];
         b.classList.toggle('hit', s === 'hit');
         b.classList.toggle('miss', s === 'miss');
+        const isSunkCell = !!(sunkCellKeys && sunkCellKeys.has(`${r},${c}`));
+        b.classList.toggle('sunkShipCell', isSunkCell);
       }
     },
 
@@ -825,7 +828,7 @@
       this.els.hintsLeftText.textContent = String(cur.cards.filter(c => !c.used).length);
 
       // Target board: show attacks so far
-      this.renderCellsFromTarget(this.els.targetBoard, cur);
+      this.renderCellsFromTarget(this.els.targetBoard, cur, opp);
 
       // Selected target highlight
       for (const b of this.els.targetBoard.querySelectorAll('.cell')) {
@@ -931,6 +934,17 @@
       }
 
       return status;
+    },
+
+    getSunkCellKeySet(player) {
+      const out = new Set();
+      const fleet = this.getFleetStatus(player);
+      for (const ship of player.ships) {
+        if (!fleet[ship.id] || !fleet[ship.id].sunk) continue;
+        const cells = computeShipCells(ship.origin, ship.orient, ship.len);
+        for (const { r, c } of cells) out.add(`${r},${c}`);
+      }
+      return out;
     },
 
     renderGuessBar() {
