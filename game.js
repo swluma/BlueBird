@@ -118,21 +118,21 @@
     return cells.some(({ r, c }) => player.occupancy[r][c] != null);
   }
 
-  function countDestroyedShipCells(player) {
+  function countDestroyedNonShipCells(player) {
     let n = 0;
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
-        if (player.occupancy[r][c] && player.defenseShots[r][c] === 'hit') n++;
+        if (!player.occupancy[r][c] && player.defenseShots[r][c] === 'miss') n++;
       }
     }
     return n;
   }
 
-  function getDestroyedShipCells(player) {
+  function getDestroyedNonShipCells(player) {
     const out = [];
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
-        if (player.occupancy[r][c] && player.defenseShots[r][c] === 'hit') out.push({ r, c });
+        if (!player.occupancy[r][c] && player.defenseShots[r][c] === 'miss') out.push({ r, c });
       }
     }
     return out;
@@ -1301,7 +1301,7 @@
 
       if (hintWasTrue) {
         if (attackerGuessedTrue) return 'Effect: none (they trusted a true hint).';
-        return 'Effect: some of the defender’s destroyed ship cells will revive.';
+        return 'Effect: some destroyed non-ship cells on the defender board will revive.';
       } else {
         if (attackerGuessedTrue) return 'Effect: defender will get +1 extra shot on their next turn.';
         return 'Effect: a correct hint will be added about the defender (forced).';
@@ -1345,8 +1345,8 @@
           // no effect
           return;
         }
-        // Revive: random selection of destroyed ship cells = round(destroyed/3)
-        const destroyed = getDestroyedShipCells(opp);
+        // Revive: random selection of destroyed non-ship cells = round(destroyed/3)
+        const destroyed = getDestroyedNonShipCells(opp);
         const n = roundThird(destroyed.length);
         if (n <= 0) return;
 
