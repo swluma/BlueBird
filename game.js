@@ -1197,8 +1197,8 @@
       this.renderPlay();
 
       const opp = this.getOpponentPlayer();
-      const incoming = opp.hints.active && !opp.hints.active.resolved;
-      const needsJudgement = incoming && !s.ui.play.incoming.judged;
+      const incoming = (opp.hints.active && !opp.hints.active.resolved) ? opp.hints.active : null;
+      const needsJudgement = !!incoming && !s.ui.play.incoming.judged;
 
       if (!needsJudgement) {
         // No active incoming hint -> fire immediately
@@ -1221,7 +1221,9 @@
       if (!s || s.phase !== TurnPhase.PLAY) return;
 
       const opp = this.getOpponentPlayer();
-      const incoming = opp.hints.active && !opp.hints.active.resolved;
+
+      // ✅ FIX: incoming must be the hint object (or null), not a boolean
+      const incoming = (opp.hints.active && !opp.hints.active.resolved) ? opp.hints.active : null;
       if (!incoming) return;
 
       if (!s.ui.play.targetSel) {
