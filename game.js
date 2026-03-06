@@ -118,21 +118,21 @@
     return cells.some(({ r, c }) => player.occupancy[r][c] != null && player.defenseShots[r][c] !== 'hit');
   }
 
-  function countDestroyedNonShipCells(player) {
-    let n = 0;
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        if (!player.occupancy[r][c] && player.defenseShots[r][c] === 'miss') n++;
-      }
-    }
-    return n;
-  }
-
-  function getDestroyedNonShipCells(player) {
+  function getRevivableDestroyedCells(player, excludedCellKeys = new Set()) {
     const out = [];
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
-        if (!player.occupancy[r][c] && player.defenseShots[r][c] === 'miss') out.push({ r, c });
+        const shot = player.defenseShots[r][c];
+        const hasShip = player.occupancy[r][c] != null;
+        const key = `${r},${c}`;
+
+        if (shot === 'miss') {
+          out.push({ r, c });
+          continue;
+        }
+        if (shot === 'hit' && hasShip && !excludedCellKeys.has(key)) {
+          out.push({ r, c });
+        }
       }
     }
     return out;
@@ -1116,17 +1116,18 @@
 
       d.classList.add(mode);
 
-      let showHas = correct ? !!hint.areaHasShip : !!hint.claimHas;
+      const showHas = correct ? !!hint.areaHasShip : !!hint.claimHas;
+      let depletedHas = false;
       if (showHas && defenderPlayer) {
         // HAS overlays are live: once all ship cells in the area are exposed, show HAS NOT styling.
         const liveCells = hintCells(hint.type, hint.selection);
         const hasUnexposed = evaluateAreaHasUnexposedShip(defenderPlayer, liveCells);
         if (!hasUnexposed) {
-          showHas = false;
-          d.classList.add('depletedHas');
+          depletedHas = true;
         }
       }
       d.classList.add(showHas ? 'has' : 'hasnot');
+      if (depletedHas) d.classList.add('depletedHas');
 
       return d;
     },
@@ -1385,7 +1386,7 @@
 
       if (hintWasTrue) {
         if (attackerGuessedTrue) return 'Effect: none (they trusted a true hint).';
-        return 'Effect: about half of destroyed non-ship cells on the defender board will revive (rounded).';
+        return 'Effect: about half of revivable destroyed cells on the defender board will revive (rounded).';
       } else {
         if (attackerGuessedTrue) return 'Effect: defender gains 2 bonus shots on their next turn.';
         return 'Effect: a correct hint will be added about the defender (forced).';
@@ -1429,8 +1430,9 @@
           // no effect
           return;
         }
-        // Revive: random selection of destroyed non-ship cells = round(destroyed/2)
-        const destroyed = getDestroyedNonShipCells(opp);
+        // Revive from destroyed cells, but never from fully exposed/sunk ship cells.
+        const sunkCellKeys = this.getSunkCellKeySet(opp);
+        const destroyed = getRevivableDestroyedCells(opp, sunkCellKeys);
         const n = roundHalf(destroyed.length);
         if (n <= 0) return;
 
