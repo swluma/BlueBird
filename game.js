@@ -1360,9 +1360,9 @@
 
       if (hintWasTrue) {
         if (attackerGuessedTrue) return 'Effect: none (they trusted a true hint).';
-        return 'Effect: some destroyed non-ship cells on the defender board will revive.';
+        return 'Effect: about half of destroyed non-ship cells on the defender board will revive (rounded).';
       } else {
-        if (attackerGuessedTrue) return 'Effect: defender will get +2 extra shots on their next turn.';
+        if (attackerGuessedTrue) return 'Effect: defender gains 2 bonus shots on their next turn.';
         return 'Effect: a correct hint will be added about the defender (forced).';
       }
     },
