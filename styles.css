@@ -60,6 +60,8 @@ a{color:inherit}
   display:flex;
   align-items:center;
   gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
 }
 .status{display:flex; gap:10px; align-items:center}
 .infoBtns{
@@ -81,6 +83,15 @@ a{color:inherit}
   font-size:12px;
 }
 .pill.timer{min-width:86px; justify-content:center}
+.pill.playTimer{
+  min-width:96px;
+  font-size:15px;
+  font-weight:800;
+  letter-spacing:.2px;
+  background: linear-gradient(180deg, #1a2f65dd, #0d1b3edd);
+  border-color:#7cc8ff55;
+  box-shadow: 0 0 0 1px #7cc8ff33 inset, 0 6px 16px #00000030;
+}
 .pill b{font-weight:800}
 
 .main{flex:1; padding:16px; max-width:1200px; width:100%; margin:0 auto}
@@ -113,7 +124,9 @@ a{color:inherit}
   .playGrid{grid-template-columns: 1fr}
   .status{display:none}
   .topbarRight{gap:6px}
+  .topbarRight{max-width:58%}
   .infoBtns .btn.infoBtn{padding:7px 8px; font-size:11px}
+  .pill.playTimer{font-size:14px}
 }
 
 .card{
