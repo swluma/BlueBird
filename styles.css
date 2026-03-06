@@ -329,6 +329,10 @@ a{color:inherit}
 .hintOverlay.active.hasnot{background: color-mix(in oklab, var(--hint-active-hasnot) 28%, transparent); border-color: color-mix(in oklab, var(--hint-active-hasnot) 60%, #ffffff30)}
 .hintOverlay.past.has{background: color-mix(in oklab, var(--hint-past-has) 16%, transparent); border-color: color-mix(in oklab, var(--hint-past-has) 40%, #ffffff22)}
 .hintOverlay.past.hasnot{background: color-mix(in oklab, var(--hint-past-hasnot) 16%, transparent); border-color: color-mix(in oklab, var(--hint-past-hasnot) 40%, #ffffff22)}
+.hintOverlay.depletedHas{
+  background: color-mix(in oklab, var(--hint-past-hasnot) 16%, transparent);
+  border-color: color-mix(in oklab, var(--hint-past-hasnot) 40%, #ffffff22);
+}
 .hintOverlay.blink{
   animation: blinkHint 1s ease-in-out infinite;
 }

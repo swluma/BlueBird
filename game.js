@@ -114,8 +114,8 @@
     return { r: selection.cell.r, c: selection.cell.c, w: 1, h: 1 };
   }
 
-  function evaluateAreaHasShip(player, cells) {
-    return cells.some(({ r, c }) => player.occupancy[r][c] != null);
+  function evaluateAreaHasUnexposedShip(player, cells) {
+    return cells.some(({ r, c }) => player.occupancy[r][c] != null && player.defenseShots[r][c] !== 'hit');
   }
 
   function countDestroyedNonShipCells(player) {
@@ -1073,7 +1073,7 @@
 
       // Past hints (correct display)
       for (const hint of defenderPlayer.hints.past) {
-        const overlay = this.makeHintOverlay(hint, { mode: 'past', correct: true });
+        const overlay = this.makeHintOverlay(hint, defenderPlayer, { mode: 'past', correct: true });
         if (hint.blink) overlay.classList.add('blink');
         layerEl.appendChild(overlay);
       }
@@ -1081,7 +1081,7 @@
       // Active hint (claimed colors) - only show to opponent on target board, and to self too (so you remember)
       if (defenderPlayer.hints.active && !defenderPlayer.hints.active.resolved) {
         const hint = defenderPlayer.hints.active;
-        const overlay = this.makeHintOverlay(hint, { mode: 'active', correct: false });
+        const overlay = this.makeHintOverlay(hint, defenderPlayer, { mode: 'active', correct: false });
         layerEl.appendChild(overlay);
       }
 
@@ -1097,7 +1097,7 @@
             selection: uiHint.selection,
             claimHas: uiHint.claimHas,
           };
-          const overlay = this.makeHintOverlay(preview, { mode: 'active', correct: false });
+          const overlay = this.makeHintOverlay(preview, null, { mode: 'active', correct: false });
           overlay.style.borderStyle = 'dashed';
           overlay.style.opacity = '0.95';
           layerEl.appendChild(overlay);
@@ -1105,7 +1105,7 @@
       }
     },
 
-    makeHintOverlay(hint, { mode, correct }) {
+    makeHintOverlay(hint, defenderPlayer, { mode, correct }) {
       const rect = hintRect(hint.type, hint.selection);
       const d = el('div', 'hintOverlay');
 
@@ -1116,7 +1116,16 @@
 
       d.classList.add(mode);
 
-      const showHas = correct ? !!hint.areaHasShip : !!hint.claimHas;
+      let showHas = correct ? !!hint.areaHasShip : !!hint.claimHas;
+      if (showHas && defenderPlayer) {
+        // HAS overlays are live: once all ship cells in the area are exposed, show HAS NOT styling.
+        const liveCells = hintCells(hint.type, hint.selection);
+        const hasUnexposed = evaluateAreaHasUnexposedShip(defenderPlayer, liveCells);
+        if (!hasUnexposed) {
+          showHas = false;
+          d.classList.add('depletedHas');
+        }
+      }
       d.classList.add(showHas ? 'has' : 'hasnot');
 
       return d;
@@ -1199,7 +1208,7 @@
 
       const cardId = uiHint.selectedCardId;
       const cells = hintCells(cardId, uiHint.selection);
-      const areaHas = evaluateAreaHasShip(cur, cells);
+      const areaHas = evaluateAreaHasUnexposedShip(cur, cells);
       uiHint.areaHasShip = areaHas;
 
       const truth = uiHint.claimHas ? areaHas : !areaHas;
@@ -1256,7 +1265,7 @@
 
       // Determine truth and areaHasShip
       const cells = hintCells(uiHint.selectedCardId, uiHint.selection);
-      const areaHas = evaluateAreaHasShip(cur, cells);
+      const areaHas = evaluateAreaHasUnexposedShip(cur, cells);
       const truth = uiHint.claimHas ? areaHas : !areaHas;
 
       // Consume card
@@ -1480,7 +1489,7 @@
       else selection = { cell: { r: randInt(ROWS), c: randInt(COLS) } };
 
       const cells = hintCells(type, selection);
-      const areaHas = evaluateAreaHasShip(defender, cells);
+      const areaHas = evaluateAreaHasUnexposedShip(defender, cells);
 
       return {
         id: `F-${Date.now()}-${Math.random().toString(16).slice(2)}`,
