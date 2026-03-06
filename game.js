@@ -761,7 +761,7 @@
     },
 
     renderShipLayer(layerEl, player, opts) {
-      const { selectable, selectedShipId, onShipClick, sunkShipIds } = opts;
+      const { selectable, selectedShipId, onShipClick, sunkShipIds, showDamageMarks } = opts;
       layerEl.innerHTML = '';
       for (const ship of player.ships) {
         const shipEl = el('div', 'ship');
@@ -779,6 +779,19 @@
         shipEl.style.height = `${(h / ROWS) * 100}%`;
 
         shipEl.dataset.shipId = ship.id;
+
+        if (showDamageMarks) {
+          const shipCells = computeShipCells(ship.origin, ship.orient, ship.len);
+          for (const { r, c } of shipCells) {
+            if (player.defenseShots[r][c] !== 'hit') continue;
+            const localR = r - ship.origin.r;
+            const localC = c - ship.origin.c;
+            const mark = el('div', 'shipHitMark');
+            mark.style.left = `${((localC + 0.5) / w) * 100}%`;
+            mark.style.top = `${((localR + 0.5) / h) * 100}%`;
+            shipEl.appendChild(mark);
+          }
+        }
 
         if (selectable) {
           shipEl.addEventListener('click', (e) => {
@@ -914,7 +927,8 @@
       );
       this.renderShipLayer(this.els.ownShipLayer, cur, {
         selectable: false,
-        sunkShipIds: ownSunkShipIds
+        sunkShipIds: ownSunkShipIds,
+        showDamageMarks: true
       });
       this.els.ownShipLayer.style.opacity = s.ui.play.ownVisible ? '1' : '0';
 

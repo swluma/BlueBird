@@ -386,6 +386,19 @@ a{color:inherit}
     linear-gradient(180deg, #9f1010, #620707 65%, #3f0303);
   box-shadow: 0 0 0 2px #ff4d4d55, 0 14px 30px #3a0202aa;
 }
+.shipHitMark{
+  position:absolute;
+  transform:translate(-50%,-56%);
+  color:#ffd1d1;
+  font-size:18px;
+  font-weight:900;
+  text-shadow:0 0 18px #ff7d7d99;
+  pointer-events:none;
+  z-index:3;
+}
+.shipHitMark::before{
+  content:"\2715";
+}
 
 .rotateHandle{
   position:absolute;
