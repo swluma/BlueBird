@@ -898,7 +898,7 @@
       const opp = this.getOpponentPlayer();
 
       this.els.turnTitle.textContent = `Player ${curIdx + 1}'s Turn`;
-      this.els.turnSubtitle.textContent = `Before your first shot, you may place 1 hint on your board (optional).`;
+      this.els.turnSubtitle.textContent = `While you still have shots left, you may place 1 hint on your board (optional).`;
 
       this.els.shotsText.textContent = String(s.turn.shotsRemaining);
       this.els.hintsLeftText.textContent = String(cur.cards.filter(c => !c.used).length);
@@ -1149,8 +1149,8 @@
             this.toast('Show your board to place a hint.', 'bad');
             return;
           }
-          if (this.state.turn.hasFiredThisTurn) {
-            this.toast('Hints must be placed before your first shot.', 'bad');
+          if (this.state.turn.shotsRemaining <= 0) {
+            this.toast('No shots left this turn to place a hint.', 'bad');
             return;
           }
           if (this.state.ui.play.hint.setThisTurn) {
@@ -1184,7 +1184,7 @@
       this.els.toggleHasNotBtn.classList.toggle('active', uiHint.claimHas === false);
 
       // Confirm hint enabled when a card is selected and selection made
-      const canConfirm = !!uiHint.selectedCardId && !!uiHint.selection && !uiHint.setThisTurn && !s.turn.hasFiredThisTurn;
+      const canConfirm = !!uiHint.selectedCardId && !!uiHint.selection && !uiHint.setThisTurn && s.turn.shotsRemaining > 0;
       this.els.confirmHintBtn.disabled = !canConfirm;
 
       // Truth preview text
@@ -1252,7 +1252,7 @@
 
       if (!uiHint.selectedCardId || !uiHint.selection) return;
       if (uiHint.setThisTurn) return;
-      if (s.turn.hasFiredThisTurn) return;
+      if (s.turn.shotsRemaining <= 0) return;
 
       // Determine truth and areaHasShip
       const cells = hintCells(uiHint.selectedCardId, uiHint.selection);
@@ -1510,7 +1510,7 @@
       if (cur.targetShots[r][c] !== 'unknown') return;
       if (s.turn.shotsRemaining <= 0) return;
 
-      // After first shot, lock hint placement for this turn
+      // Track that at least one shot was taken this turn
       s.turn.hasFiredThisTurn = true;
 
       // Resolve shot
