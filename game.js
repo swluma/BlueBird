@@ -146,9 +146,9 @@
     return arr;
   }
 
-  function roundThird(n) {
-    // round(n/3)
-    return Math.round(n / 3);
+  function roundHalf(n) {
+    // round(n/2)
+    return Math.round(n / 2);
   }
 
   const icons = {
@@ -375,7 +375,7 @@
           active: null, // hint object waiting to be judged
           past: [], // judged or forced correct hints
         },
-        bonusShotsNextTurn: 0, // +1 shot next time this player attacks
+        bonusShotsNextTurn: 0, // bonus shots next time this player attacks
       };
     },
 
@@ -1362,7 +1362,7 @@
         if (attackerGuessedTrue) return 'Effect: none (they trusted a true hint).';
         return 'Effect: some destroyed non-ship cells on the defender board will revive.';
       } else {
-        if (attackerGuessedTrue) return 'Effect: defender will get +1 extra shot on their next turn.';
+        if (attackerGuessedTrue) return 'Effect: defender will get +2 extra shots on their next turn.';
         return 'Effect: a correct hint will be added about the defender (forced).';
       }
     },
@@ -1404,9 +1404,9 @@
           // no effect
           return;
         }
-        // Revive: random selection of destroyed non-ship cells = round(destroyed/3)
+        // Revive: random selection of destroyed non-ship cells = round(destroyed/2)
         const destroyed = getDestroyedNonShipCells(opp);
-        const n = roundThird(destroyed.length);
+        const n = roundHalf(destroyed.length);
         if (n <= 0) return;
 
         shuffle(destroyed);
@@ -1430,8 +1430,8 @@
       // Hint was a lie
       if (attackerGuessedTrue) {
         // Defender gets bonus shot next turn
-        opp.bonusShotsNextTurn += 1;
-        this.toast('+1 SHOT', 'good', true);
+        opp.bonusShotsNextTurn += 2;
+        this.toast('+2 SHOTS', 'good', true);
         await this.sleep(900);
         this.renderPlay();
         return;
