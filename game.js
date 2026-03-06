@@ -435,11 +435,13 @@
       this.els.passTitle.textContent = title;
       this.els.passBody.textContent = body;
       this.els.passOverlay.classList.remove('hidden');
+      document.getElementById('app')?.classList.add('pass-blur');
       this.pauseTimer(true);
     },
 
     onReady() {
       this.els.passOverlay.classList.add('hidden');
+      document.getElementById('app')?.classList.remove('pass-blur');
       if (!this.state) return;
 
       // When coming from start, go to setup; from play, go to next player's turn.

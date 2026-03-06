@@ -36,6 +36,15 @@ a{color:inherit}
 .hidden{display:none !important}
 
 #app{min-height:100%; display:flex; flex-direction:column}
+.topbar,
+.main{
+  transition: filter .2s ease, opacity .2s ease;
+}
+#app.pass-blur .topbar,
+#app.pass-blur .main{
+  filter: blur(8px);
+  opacity:.55;
+}
 .topbar{
   display:flex; align-items:center; justify-content:space-between;
   padding:14px 16px; border-bottom:1px solid var(--line);
