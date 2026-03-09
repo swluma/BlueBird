@@ -730,6 +730,12 @@ a{color:inherit}
   border-style:dashed;
   opacity:.95;
 }
+#placeHintInfoOverlay .infoModal{
+  max-height: calc(100vh - 20px);
+}
+#placeHintInfoOverlay .infoTableWrap{
+  max-height: 360px;
+}
 
 .resultSmall{font-size:14px; color:var(--muted); letter-spacing:.2px}
 .resultBig{
