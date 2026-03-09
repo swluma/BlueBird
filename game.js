@@ -1766,7 +1766,7 @@
       const guessText = `You guessed ${attackerGuess === 'fake' ? 'FAKE' : (attackerGuess ? 'TRUE' : 'LIE')}`;
       const guessColor = attackerGuess === 'fake' ? 'var(--accent)' : (attackerGuess ? 'var(--good)' : 'var(--danger)');
 
-      // Build effect text (effects apply to the hint owner (defender): opponent)
+      // Build effect text for reveal popup.
       const effectText = this.getEffectDescription(incoming, attackerGuess);
 
       await this.showResultOverlay(bigText, bigColor, guessText, guessColor, effectText);
@@ -1792,22 +1792,21 @@
     },
 
     getEffectDescription(hint, attackerGuess) {
-      // Effects apply to hint owner (defender).
       if (hint.type === 'fake') {
         if (attackerGuess === 'fake') {
-          return 'Effect: attacker places a TRUE hint on the defender field, with hint type restricted to the defender consumed hint types.';
+          return 'Effect: you place a TRUE hint on the opponent field, with hint type restricted to opponent consumed hint types.';
         }
-        return 'Effect: defender will place a TRUE hint on the attacker field at the start of defender\'s next turn.';
+        return 'Effect: opponent will place a TRUE hint on your field at the start of opponent\'s next turn.';
       }
 
       const hintWasTrue = hint.truth === true;
 
       if (hintWasTrue) {
         if (attackerGuess === true) return 'Effect: none (they trusted a true hint).';
-        return 'Effect: about half of revivable destroyed cells on the defender board (misses and hits on ships that are not fully sunk) will revive (rounded).';
+        return 'Effect: about half of revivable destroyed cells on the opponent board (misses and hits on ships that are not fully sunk) will revive (rounded).';
       } else {
-        if (attackerGuess === false) return 'Effect: a correct hint will be added about the defender (forced).';
-        return 'Effect: defender gains 2 bonus shots on their next turn.';
+        if (attackerGuess === false) return 'Effect: a forced correct hint will be added about the opponent.';
+        return 'Effect: opponent gains 2 bonus shots on their next turn.';
       }
     },
 
