@@ -742,6 +742,12 @@ a{color:inherit}
 #guessHintInfoOverlay .infoTableWrap{
   max-height: 430px;
 }
+#effectsInfoOverlay .infoModal{
+  max-height: calc(100vh - 20px);
+}
+#effectsInfoOverlay .infoTableWrap{
+  max-height: 430px;
+}
 
 .resultSmall{font-size:14px; color:var(--muted); letter-spacing:.2px}
 .resultBig{
