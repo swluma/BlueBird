@@ -168,10 +168,14 @@
     return { cell: { r: randInt(ROWS), c: randInt(COLS) } };
   }
 
-  function createUnconstrainedFakeDisguise() {
+  function createUnconstrainedFakeDisguise(player) {
     // Intentionally unconstrained: fake-hint disguise may overlap fully with past hints
     // and therefore may reveal no new information.
-    const type = HINT_TYPES[randInt(HINT_TYPES.length)].id;
+    const unconsumed = (player?.cards || [])
+      .filter((card) => isHintType(card.id) && !card.used)
+      .map((card) => card.id);
+    const pool = unconsumed.length > 0 ? unconsumed : HINT_TYPES.map((card) => card.id);
+    const type = pool[randInt(pool.length)];
     return {
       type,
       selection: randomHintSelection(type),
@@ -1453,7 +1457,7 @@
       let fakeSelection = null;
       let fakeClaimHas = null;
       if (isFake) {
-        const disguise = createUnconstrainedFakeDisguise();
+        const disguise = createUnconstrainedFakeDisguise(cur);
         fakeType = disguise.type;
         fakeSelection = disguise.selection;
         fakeClaimHas = disguise.claimHas;
