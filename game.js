@@ -289,6 +289,7 @@
         showOwnBtn: $('#showOwnBtn'),
         hideOwnBtn: $('#hideOwnBtn'),
         ownHintTruthText: $('#ownHintTruthText'),
+        hintCardsEffectText: $('#hintCardsEffectText'),
         toggleHasBtn: $('#toggleHasBtn'),
         toggleHasNotBtn: $('#toggleHasNotBtn'),
         confirmHintBtn: $('#confirmHintBtn'),
@@ -1289,6 +1290,8 @@
       const s = this.state;
       const cur = this.getCurrentPlayer();
       const uiHint = s.ui.play.hint;
+      const hintsLeft = cur.cards.filter((card) => !card.used).length;
+      const exhausted = hintsLeft === 0;
 
       this.els.cardsRow.innerHTML = '';
       for (const card of cur.cards) {
@@ -1334,6 +1337,13 @@
         });
 
         this.els.cardsRow.appendChild(c);
+      }
+
+      if (this.els.hintCardsEffectText) {
+        this.els.hintCardsEffectText.classList.toggle('active', exhausted);
+        this.els.hintCardsEffectText.innerHTML = exhausted
+          ? '<b>Effect activated:</b> All hint cards are consumed. Create one TRUE hint on the opponent board.'
+          : 'Consume all hint cards to activate: create one TRUE hint on the opponent board.';
       }
     },
 

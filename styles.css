@@ -526,6 +526,13 @@ a{color:inherit}
 .hintIcon svg{fill:#e9eefc}
 .hintText{font-size:12px; color:var(--muted); line-height:1.2}
 .hintName{font-weight:800}
+.hintCardsEffectText{
+  margin-top:8px;
+}
+.hintCardsEffectText.active{
+  color:var(--good);
+  font-weight:700;
+}
 
 /* Hint controls */
 .hintControls{
