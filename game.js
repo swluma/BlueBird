@@ -1140,8 +1140,9 @@
 
       const showHas = correct ? !!hint.areaHasShip : !!hint.claimHas;
       let depletedHas = false;
-      if (showHas && defenderPlayer) {
-        // HAS overlays are live: once all ship cells in the area are exposed, show HAS NOT styling.
+      if (showHas && defenderPlayer && mode !== 'active') {
+        // Non-active HAS overlays are live: once all ship cells in the area are exposed, show HAS NOT styling.
+        // Active hints must keep their claimed state because they are allowed to be lies.
         const liveCells = hintCells(hint.type, hint.selection);
         const hasUnexposed = evaluateAreaHasUnexposedShip(defenderPlayer, liveCells);
         if (!hasUnexposed) {
