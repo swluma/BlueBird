@@ -251,6 +251,7 @@
 
         guessBar: $('#guessBar'),
         incomingHintDesc: $('#incomingHintDesc'),
+        guessEffectsInfoBtn: $('#guessEffectsInfoBtn'),
         guessTrueBtn: $('#guessTrueBtn'),
         guessLieBtn: $('#guessLieBtn'),
         confirmShotBtn: $('#confirmShotBtn'),
@@ -295,6 +296,7 @@
       this.els.guessTrueBtn.addEventListener('click', () => this.setGuess(true));
       this.els.guessLieBtn.addEventListener('click', () => this.setGuess(false));
       this.els.confirmShotBtn.addEventListener('click', () => this.confirmShot());
+      this.els.guessEffectsInfoBtn.addEventListener('click', () => this.openInfoOverlay('effectsInfoOverlay'));
 
       this.els.readyBtn.addEventListener('click', () => this.onReady());
       this.els.forfeitBtn.addEventListener('click', () => this.confirmEndGame());
@@ -1049,7 +1051,8 @@
 
       // Describe incoming hint briefly
       const h = opp.hints.active;
-      this.els.incomingHintDesc.textContent = this.describeHint(h, { claimed: true });
+      const claimText = this.describeHint(h, { claimed: true }).replace(/^Hint:\s*/, '');
+      this.els.incomingHintDesc.textContent = `The opponent says: ${claimText}`;
 
       this.els.guessTrueBtn.classList.toggle('primary', s.ui.play.incoming.guess === true);
       this.els.guessLieBtn.classList.toggle('primary', s.ui.play.incoming.guess === false);
