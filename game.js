@@ -267,6 +267,7 @@
         resultOverlay: $('#resultOverlay'),
         resultSmall: $('#resultSmall'),
         resultBig: $('#resultBig'),
+        resultGuess: $('#resultGuess'),
         resultEffect: $('#resultEffect'),
         resultContinueBtn: $('#resultContinueBtn'),
 
@@ -1366,11 +1367,13 @@
       const resultIsTrue = hintTruth === true;
       const bigText = resultIsTrue ? 'It was TRUE!' : 'It was a LIE!';
       const bigColor = resultIsTrue ? 'var(--good)' : 'var(--danger)';
+      const guessText = `You guessed ${guessTrue ? 'TRUE' : 'LIE'}`;
+      const guessColor = guessTrue ? 'var(--good)' : 'var(--danger)';
 
       // Build effect text (effects apply to the hint owner (defender): opponent)
       const effectText = this.getEffectDescription(incoming, guessTrue);
 
-      await this.showResultOverlay(bigText, bigColor, effectText);
+      await this.showResultOverlay(bigText, bigColor, guessText, guessColor, effectText);
 
       // Mark hint as resolved and move to past (correct display)
       incoming.resolved = true;
@@ -1405,11 +1408,13 @@
       }
     },
 
-    showResultOverlay(bigText, color, effectText) {
+    showResultOverlay(bigText, color, guessText, guessColor, effectText) {
       return new Promise((resolve) => {
         this.els.resultSmall.textContent = 'The result is…';
         this.els.resultBig.textContent = '—';
         this.els.resultBig.style.color = 'var(--text)';
+        this.els.resultGuess.textContent = '';
+        this.els.resultGuess.style.color = 'var(--text)';
         this.els.resultEffect.textContent = '';
         this.els.resultContinueBtn.classList.add('hidden');
         this.els.resultContinueBtn.disabled = true;
@@ -1418,6 +1423,8 @@
         setTimeout(() => {
           this.els.resultBig.textContent = bigText;
           this.els.resultBig.style.color = color;
+          this.els.resultGuess.textContent = guessText;
+          this.els.resultGuess.style.color = guessColor;
           this.els.resultEffect.textContent = effectText;
           this.els.resultContinueBtn.disabled = false;
           this.els.resultContinueBtn.classList.remove('hidden');
