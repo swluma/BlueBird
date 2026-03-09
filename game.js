@@ -1243,7 +1243,7 @@
         ? 'none (they trusted a true hint).'
         : 'a forced correct hint about your board is added.';
       const wrongGuessEffect = truth
-        ? 'about half of your revivable destroyed cells are restored.'
+        ? 'about half of your revivable destroyed cells (misses and hits on ships that are not fully sunk) are restored.'
         : 'you gain 2 bonus shots next turn.';
 
       this.els.ownHintTruthText.innerHTML =
@@ -1419,7 +1419,7 @@
 
       if (hintWasTrue) {
         if (attackerGuessedTrue) return 'Effect: none (they trusted a true hint).';
-        return 'Effect: about half of revivable destroyed cells on the defender board will revive (rounded).';
+        return 'Effect: about half of revivable destroyed cells on the defender board (misses and hits on ships that are not fully sunk) will revive (rounded).';
       } else {
         if (attackerGuessedTrue) return 'Effect: defender gains 2 bonus shots on their next turn.';
         return 'Effect: a correct hint will be added about the defender (forced).';
