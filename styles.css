@@ -160,7 +160,8 @@ a{color:inherit}
   align-items:center;
   gap:8px;
 }
-.opt input[type="number"]{
+.opt input[type="number"],
+.opt input[type="text"]{
   width:90px;
   padding:8px 10px;
   border-radius:12px;
@@ -168,6 +169,9 @@ a{color:inherit}
   background:#0b1020;
   color:var(--text);
   outline:none;
+}
+.opt input[type="text"]{
+  width:140px;
 }
 .opt input[type="checkbox"]{transform:scale(1.1)}
 .btn.toggleOn{

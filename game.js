@@ -212,6 +212,8 @@
         playPanel: $('#playPanel'),
 
         startBtn: $('#startBtn'),
+        p1NameInput: $('#p1NameInput'),
+        p2NameInput: $('#p2NameInput'),
         turnTimerInput: $('#turnTimerInput'),
         timerToggleBtn: $('#timerToggleBtn'),
         extraShotToggle: $('#extraShotToggle'),
@@ -367,6 +369,16 @@
       this.els.turnTimerInput.disabled = !enabled;
     },
 
+    normalizePlayerName(raw, fallback) {
+      const name = String(raw ?? '').trim();
+      return name ? name.slice(0, 24) : fallback;
+    },
+
+    getPlayerName(idx) {
+      if (!this.state || !Array.isArray(this.state.playerNames)) return `Player ${idx + 1}`;
+      return this.state.playerNames[idx] || `Player ${idx + 1}`;
+    },
+
     newPlayerState() {
       return {
         ships: [], // {id,len,origin,orient}
@@ -386,10 +398,15 @@
       const turnSeconds = clamp(parseInt(this.els.turnTimerInput.value || '60', 10), 15, 180);
       const timerEnabled = !!this.startTimerEnabled;
       const extraShotOnHit = !!this.els.extraShotToggle.checked;
+      const playerNames = [
+        this.normalizePlayerName(this.els.p1NameInput.value, 'Player 1'),
+        this.normalizePlayerName(this.els.p2NameInput.value, 'Player 2'),
+      ];
 
       this.state = {
         phase: TurnPhase.SETUP,
         config: { turnSeconds, timerEnabled, extraShotOnHit },
+        playerNames,
         setupPlayer: 0,
         currentPlayer: 0,
         players: [this.newPlayerState(), this.newPlayerState()],
@@ -429,7 +446,7 @@
         }
       };
 
-      this.openPassOverlay(`Player 1`, `Get ready to place your ships. Keep the screen hidden while passing.`);
+      this.openPassOverlay(this.getPlayerName(0), `Get ready to place your ships. Keep the screen hidden while passing.`);
       this.setPhasePill('Setup');
     },
 
@@ -492,7 +509,7 @@
     renderSetup() {
       const pIdx = this.state.setupPlayer;
       const player = this.currentSetupPlayer();
-      this.els.setupTitle.textContent = `Player ${pIdx + 1}: Place your fleet`;
+      this.els.setupTitle.textContent = `${this.getPlayerName(pIdx)}: Place your fleet`;
       this.els.setupSubtitle.textContent = `Ships: 5, 4, 3, 3, 2. Tap a ship above, then tap the board to place it.`;
       this.renderShipPalette();
 
@@ -718,7 +735,7 @@
       if (pIdx === 0) {
         // pass to player 2 setup
         this.state.setupPlayer = 1;
-        this.openPassOverlay('Player 2', 'Get ready to place your ships. Keep the screen hidden while passing.');
+        this.openPassOverlay(this.getPlayerName(1), 'Get ready to place your ships. Keep the screen hidden while passing.');
         // still setup phase
         return;
       }
@@ -731,7 +748,8 @@
       this.state.ui.play.hint.selection = null;
       this.state.ui.play.hint.setThisTurn = false;
 
-      this.openPassOverlay('Player 1', 'Game starts! Hand the device to Player 1. Keep the screen hidden while passing.');
+      const p1Name = this.getPlayerName(0);
+      this.openPassOverlay(p1Name, `Game starts! Hand the device to ${p1Name}. Keep the screen hidden while passing.`);
       this.setPhasePill('Play');
     },
 
@@ -900,7 +918,7 @@
       const cur = this.getCurrentPlayer();
       const opp = this.getOpponentPlayer();
 
-      this.els.turnTitle.textContent = `Player ${curIdx + 1}'s Turn`;
+      this.els.turnTitle.textContent = `${this.getPlayerName(curIdx)}'s Turn`;
       this.els.turnSubtitle.textContent = `While you still have shots left, you may place 1 hint on your board (optional).`;
 
       this.els.shotsText.textContent = String(s.turn.shotsRemaining);
@@ -1574,7 +1592,7 @@
       const allSunk = Object.values(oppStatus).every(st => st.sunk);
       if (allSunk) {
         this.stopTurnTimer();
-        this.showGameOver(`Player ${this.getCurrentPlayerIdx() + 1} wins!`, 'All enemy ships are sunk.');
+        this.showGameOver(`${this.getPlayerName(this.getCurrentPlayerIdx())} wins!`, 'All enemy ships are sunk.');
         return;
       }
 
@@ -1600,7 +1618,8 @@
       s.currentPlayer = (s.currentPlayer === 0) ? 1 : 0;
 
       // Show pass overlay
-      this.openPassOverlay(`Player ${s.currentPlayer + 1}`, `Pass the device. Player ${s.currentPlayer + 1}, prepare for your turn.`);
+      const nextName = this.getPlayerName(s.currentPlayer);
+      this.openPassOverlay(nextName, `Pass the device. ${nextName}, prepare for your turn.`);
       this.showPanel('#playPanel');
       this.setPhasePill('Play');
 
