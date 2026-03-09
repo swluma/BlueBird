@@ -2163,8 +2163,25 @@
     },
   };
 
+  function disablePullToRefresh() {
+    let touchStartY = 0;
+    document.addEventListener('touchstart', (e) => {
+      if (!e.touches || e.touches.length === 0) return;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+      if (!e.touches || e.touches.length === 0) return;
+      const movingDown = e.touches[0].clientY > touchStartY;
+      if (movingDown && window.scrollY <= 0) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+  }
+
   // Boot
   window.addEventListener('DOMContentLoaded', () => {
+    disablePullToRefresh();
     App.init();
 
     // Start actual play turn when play panel becomes visible after setup lock-in pass.
