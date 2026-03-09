@@ -310,6 +310,35 @@
       </div>
     </div>
 
+    <!-- EFFECT: HINT CARDS EXHAUSTED -->
+    <div class="modalOverlay hidden" id="exhaustHintOverlay" aria-modal="true" role="dialog" aria-labelledby="exhaustHintTitle">
+      <div class="modal infoModal exhaustHintModal">
+        <div class="modalTitle" id="exhaustHintTitle">All Hint Cards Used</div>
+        <div class="modalBody infoBody">
+          <p>
+            Choose a hint type, then tap a position on the copied opponent field. This creates a TRUE hint on the opponent field.
+          </p>
+          <div class="exhaustTypePicker" id="exhaustTypePicker" role="group" aria-label="Select hint type">
+            <button class="btn exhaustTypeBtn" data-type="cell" type="button">Cell</button>
+            <button class="btn exhaustTypeBtn" data-type="col" type="button">Column</button>
+            <button class="btn exhaustTypeBtn" data-type="row" type="button">Row</button>
+            <button class="btn exhaustTypeBtn" data-type="area" type="button">3x3</button>
+          </div>
+
+          <div class="boardWrap">
+            <div class="boardFrame">
+              <div class="boardGrid" id="exhaustHintBoard"></div>
+              <div class="overlayLayer" id="exhaustHintLayer"></div>
+            </div>
+          </div>
+          <div class="muted tiny" id="exhaustHintSelectionText">Select hint type and tap a cell.</div>
+        </div>
+        <div class="modalActions">
+          <button class="btn primary" id="confirmExhaustHintBtn" type="button" disabled>Create TRUE Hint</button>
+        </div>
+      </div>
+    </div>
+
     <!-- TOAST / FX -->
     <div class="toast hidden" id="toast"></div>
 

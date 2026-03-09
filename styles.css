@@ -668,6 +668,32 @@ a{color:inherit}
 .infoList li{
   margin:0 0 6px 0;
 }
+.exhaustHintModal{
+  width:min(680px, 100%);
+}
+.exhaustTypePicker{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap:8px;
+  margin-bottom:10px;
+}
+@media (max-width: 640px){
+  .exhaustTypePicker{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.exhaustTypeBtn{
+  font-size:12px;
+  padding:8px 10px;
+}
+.exhaustTypeBtn.active{
+  background: linear-gradient(180deg, #1d88ff, #0f5fd6);
+  border-color:#4aa7ff55;
+}
+.hintOverlay.rewardPreview{
+  border-style:dashed;
+  opacity:.95;
+}
 
 .resultSmall{font-size:14px; color:var(--muted); letter-spacing:.2px}
 .resultBig{

@@ -206,6 +206,12 @@
         flowInfoOverlay: $('#flowInfoOverlay'),
         closeEffectsInfoBtn: $('#closeEffectsInfoBtn'),
         closeFlowInfoBtn: $('#closeFlowInfoBtn'),
+        exhaustHintOverlay: $('#exhaustHintOverlay'),
+        exhaustHintBoard: $('#exhaustHintBoard'),
+        exhaustHintLayer: $('#exhaustHintLayer'),
+        exhaustTypePicker: $('#exhaustTypePicker'),
+        exhaustHintSelectionText: $('#exhaustHintSelectionText'),
+        confirmExhaustHintBtn: $('#confirmExhaustHintBtn'),
 
         startPanel: $('#startPanel'),
         setupPanel: $('#setupPanel'),
@@ -309,6 +315,14 @@
       this.els.flowInfoBtn.addEventListener('click', () => this.openInfoOverlay('flowInfoOverlay'));
       this.els.closeEffectsInfoBtn.addEventListener('click', () => this.closeInfoOverlay('effectsInfoOverlay'));
       this.els.closeFlowInfoBtn.addEventListener('click', () => this.closeInfoOverlay('flowInfoOverlay'));
+      this.els.exhaustTypePicker.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('.exhaustTypeBtn');
+        if (!btn) return;
+        const type = btn.dataset.type;
+        if (!type) return;
+        this.setExhaustHintType(type);
+      });
+      this.els.confirmExhaustHintBtn.addEventListener('click', () => this.confirmExhaustHintSelection());
 
       this.els.effectsInfoOverlay.addEventListener('click', (ev) => {
         if (ev.target === this.els.effectsInfoOverlay) this.closeInfoOverlay('effectsInfoOverlay');
@@ -342,6 +356,11 @@
     closeInfoOverlays() {
       this.closeInfoOverlay('effectsInfoOverlay');
       this.closeInfoOverlay('flowInfoOverlay');
+    },
+
+    isExhaustHintModalOpen() {
+      const s = this.state;
+      return !!(s && s.ui && s.ui.play && s.ui.play.exhaustReward && s.ui.play.exhaustReward.open);
     },
 
     // Panels
@@ -429,6 +448,11 @@
               guess: null,
               judged: false,
             },
+            exhaustReward: {
+              open: false,
+              type: 'cell',
+              selection: null,
+            },
             targetSel: null,
           },
         },
@@ -500,6 +524,7 @@
       build(this.els.setupBoard, (ev, r, c) => this.onSetupCellClick(ev, r, c));
       build(this.els.targetBoard, (ev, r, c) => this.onTargetCellClick(ev, r, c));
       build(this.els.ownBoard, (ev, r, c) => this.onOwnCellClick(ev, r, c));
+      build(this.els.exhaustHintBoard, (ev, r, c) => this.onExhaustHintCellClick(ev, r, c));
     },
 
     currentSetupPlayer() {
@@ -907,6 +932,9 @@
       s.ui.play.incoming.hintId = (opp.hints.active && !opp.hints.active.resolved) ? opp.hints.active.id : null;
       s.ui.play.incoming.guess = null;
       s.ui.play.incoming.judged = false;
+      s.ui.play.exhaustReward.open = false;
+      s.ui.play.exhaustReward.selection = null;
+      this.els.exhaustHintOverlay.classList.add('hidden');
 
       this.renderPlay();
       this.startTurnTimer();
@@ -971,6 +999,10 @@
 
       // Log
       this.els.logLine.textContent = this.makeLogLine();
+
+      if (this.isExhaustHintModalOpen()) {
+        this.renderExhaustHintModal();
+      }
     },
 
     makeLogLine() {
@@ -1271,6 +1303,7 @@
     onOwnCellClick(_ev, r, c) {
       const s = this.state;
       if (!s || s.phase !== TurnPhase.PLAY) return;
+      if (this.isExhaustHintModalOpen()) return;
       if (!s.ui.play.ownVisible) return;
 
       const cur = this.getCurrentPlayer();
@@ -1286,7 +1319,7 @@
       this.renderPlay();
     },
 
-    confirmHint() {
+    async confirmHint() {
       const s = this.state;
       const curIdx = this.getCurrentPlayerIdx();
       const cur = this.getCurrentPlayer();
@@ -1324,12 +1357,147 @@
       uiHint.selection = null;
 
       this.toast('Hint placed for your opponent.', 'good');
+
+      const hintsLeft = cur.cards.filter((c) => !c.used).length;
+      if (hintsLeft === 0) {
+        await this.promptExhaustedCardsTrueHint();
+      }
+
       this.renderPlay();
+    },
+
+    promptExhaustedCardsTrueHint() {
+      return new Promise((resolve) => {
+        const s = this.state;
+        if (!s || s.phase !== TurnPhase.PLAY) {
+          resolve(false);
+          return;
+        }
+        s.ui.play.exhaustReward.open = true;
+        s.ui.play.exhaustReward.type = 'cell';
+        s.ui.play.exhaustReward.selection = null;
+        this._resolveExhaustHint = resolve;
+        this.pauseTimer(true);
+        this.renderExhaustHintModal();
+        this.els.exhaustHintOverlay.classList.remove('hidden');
+      });
+    },
+
+    setExhaustHintType(type) {
+      const s = this.state;
+      if (!s || !this.isExhaustHintModalOpen()) return;
+      if (!HINT_CARDS.some((card) => card.id === type)) return;
+      s.ui.play.exhaustReward.type = type;
+      s.ui.play.exhaustReward.selection = null;
+      this.renderExhaustHintModal();
+    },
+
+    onExhaustHintCellClick(_ev, r, c) {
+      const s = this.state;
+      if (!s || !this.isExhaustHintModalOpen()) return;
+
+      const type = s.ui.play.exhaustReward.type;
+      if (type === 'row') s.ui.play.exhaustReward.selection = { row: r };
+      else if (type === 'col') s.ui.play.exhaustReward.selection = { col: c };
+      else if (type === 'area') s.ui.play.exhaustReward.selection = { center: { r, c } };
+      else s.ui.play.exhaustReward.selection = { cell: { r, c } };
+
+      this.renderExhaustHintModal();
+    },
+
+    renderExhaustHintModal() {
+      const s = this.state;
+      if (!s || !this.isExhaustHintModalOpen()) return;
+
+      const cur = this.getCurrentPlayer();
+      const opp = this.getOpponentPlayer();
+      const reward = s.ui.play.exhaustReward;
+
+      this.renderCellsFromTarget(this.els.exhaustHintBoard, cur, opp);
+      this.renderHintsLayer(this.els.exhaustHintLayer, opp, { view: 'opponent' });
+
+      const typeButtons = this.els.exhaustTypePicker.querySelectorAll('.exhaustTypeBtn');
+      for (const btn of typeButtons) {
+        btn.classList.toggle('active', btn.dataset.type === reward.type);
+      }
+
+      if (reward.selection) {
+        const previewHint = {
+          type: reward.type,
+          selection: reward.selection,
+          claimHas: true,
+          areaHasShip: true,
+        };
+        const overlay = this.makeHintOverlay(previewHint, opp, { mode: 'past', correct: true });
+        overlay.classList.add('rewardPreview');
+        overlay.classList.remove('has', 'hasnot', 'depletedHas');
+        this.els.exhaustHintLayer.appendChild(overlay);
+
+        this.els.exhaustHintSelectionText.textContent = `Selected: ${this.describeHintSelectionOnly(reward.type, reward.selection)}`;
+      } else {
+        this.els.exhaustHintSelectionText.textContent = 'Select hint type and tap a cell.';
+      }
+
+      this.els.confirmExhaustHintBtn.disabled = !reward.selection;
+    },
+
+    describeHintSelectionOnly(type, selection) {
+      if (type === 'row') return `Row ${selection.row + 1}`;
+      if (type === 'col') return `Column ${COL_LABELS[selection.col]}`;
+      if (type === 'area') return `3x3 area around ${coordToText(selection.center.r, selection.center.c)}`;
+      return `Cell ${coordToText(selection.cell.r, selection.cell.c)}`;
+    },
+
+    confirmExhaustHintSelection() {
+      const s = this.state;
+      if (!s || !this.isExhaustHintModalOpen()) return;
+
+      const reward = s.ui.play.exhaustReward;
+      if (!reward.selection) return;
+
+      const oppIdx = this.getOpponentPlayerIdx();
+      const opp = this.getOpponentPlayer();
+      const cells = hintCells(reward.type, reward.selection);
+      const areaHas = evaluateAreaHasUnexposedShip(opp, cells);
+
+      const hint = {
+        id: `E-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        owner: oppIdx,
+        type: reward.type,
+        selection: structuredClone(reward.selection),
+        claimHas: areaHas,
+        areaHasShip: areaHas,
+        truth: true,
+        resolved: true,
+        forced: true,
+        blink: true,
+      };
+      opp.hints.past.push(hint);
+
+      this.closeExhaustHintModal(true);
+      this.toast('TRUE hint added on opponent field.', 'good');
+      setTimeout(() => {
+        hint.blink = false;
+        this.renderPlay();
+      }, 2500);
+    },
+
+    closeExhaustHintModal(completed) {
+      const s = this.state;
+      if (!s || !s.ui || !s.ui.play || !s.ui.play.exhaustReward) return;
+
+      s.ui.play.exhaustReward.open = false;
+      this.els.exhaustHintOverlay.classList.add('hidden');
+      this.pauseTimer(false);
+      const resolve = this._resolveExhaustHint;
+      this._resolveExhaustHint = null;
+      if (resolve) resolve(!!completed);
     },
 
     onTargetCellClick(_ev, r, c) {
       const s = this.state;
       if (!s || s.phase !== TurnPhase.PLAY) return;
+      if (this.isExhaustHintModalOpen()) return;
 
       const cur = this.getCurrentPlayer();
       if (cur.targetShots[r][c] !== 'unknown') return;
@@ -1354,6 +1522,7 @@
     setGuess(isTrue) {
       const s = this.state;
       if (!s) return;
+      if (this.isExhaustHintModalOpen()) return;
       s.ui.play.incoming.guess = isTrue;
       this.renderPlay();
     },
@@ -1361,6 +1530,7 @@
     async confirmShot() {
       const s = this.state;
       if (!s || s.phase !== TurnPhase.PLAY) return;
+      if (this.isExhaustHintModalOpen()) return;
 
       const opp = this.getOpponentPlayer();
 
