@@ -1217,8 +1217,17 @@
 
       const badge = truth ? `<span style="color: var(--good); font-weight:900;">TRUE</span>` : `<span style="color: var(--danger); font-weight:900;">LIE</span>`;
       const note = truth ? 'It matches your real board.' : 'It does NOT match your real board (a bluff).';
+      const correctGuessEffect = truth
+        ? 'none (they trusted a true hint).'
+        : 'a forced correct hint about your board is added.';
+      const wrongGuessEffect = truth
+        ? 'about half of your revivable destroyed cells are restored.'
+        : 'you gain 2 bonus shots next turn.';
 
-      this.els.ownHintTruthText.innerHTML = `This hint would be: ${badge} <span class="muted tiny">— ${note}</span>`;
+      this.els.ownHintTruthText.innerHTML =
+        `This hint would be: ${badge} <span class="muted tiny">- ${note}</span><br>` +
+        `<span class="muted tiny">If opponent guesses <b>correctly</b>: ${correctGuessEffect}</span><br>` +
+        `<span class="muted tiny">If opponent guesses <b>wrongly</b>: ${wrongGuessEffect}</span>`;
     },
 
     setHasToggle(has) {
