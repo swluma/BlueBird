@@ -1387,7 +1387,7 @@
       if (isFake) {
         this.els.ownHintTruthText.innerHTML =
           'This card is <b>FAKE</b>. No area is selected and no HAS/HAS NOT choice is used.<br>' +
-          '<span class="muted tiny">Confirm directly to pretend placing a hint. It will not be recorded as a past hint.</span>';
+          '<span class="muted tiny">Confirm directly to pretend placing a hint. It picks from hint types not consumed yet; if all are consumed, it picks a random type. It will not be recorded as a past hint.</span>';
         return;
       }
       if (!uiHint.selection) {
