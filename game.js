@@ -1504,6 +1504,13 @@
 
       // Attacker caught the lie -> force a correct hint about defender
       const forcedHint = this.createForcedCorrectHint(opp);
+      if (!forcedHint) {
+        this.toast('Forced hint skipped: all cells already covered by hints.', 'bad');
+        await this.sleep(900);
+        this.renderPlay();
+        return;
+      }
+
       forcedHint.blink = true;
       opp.hints.past.push(forcedHint);
 
@@ -1519,30 +1526,80 @@
     },
 
     createForcedCorrectHint(defender) {
-      // Choose random type, random selection, set claimHas = correct.
-      const type = HINT_CARDS[randInt(HINT_CARDS.length)].id;
+      // Choose a random type first, then a random placement that reveals at least one
+      // not-yet-covered cell (covered = included in any past hint on defender's field).
+      const covered = makeGrid(false);
+      for (const pastHint of defender.hints.past) {
+        const pastCells = hintCells(pastHint.type, pastHint.selection);
+        for (const { r, c } of pastCells) covered[r][c] = true;
+      }
 
-      let selection = null;
-      if (type === 'row') selection = { row: randInt(ROWS) };
-      else if (type === 'col') selection = { col: randInt(COLS) };
-      else if (type === 'area') selection = { center: { r: randInt(ROWS), c: randInt(COLS) } };
-      else selection = { cell: { r: randInt(ROWS), c: randInt(COLS) } };
+      let uncoveredExists = false;
+      for (let r = 0; r < ROWS && !uncoveredExists; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (!covered[r][c]) {
+            uncoveredExists = true;
+            break;
+          }
+        }
+      }
+      if (!uncoveredExists) return null;
 
-      const cells = hintCells(type, selection);
-      const areaHas = evaluateAreaHasUnexposedShip(defender, cells);
+      const typeOrder = shuffle(HINT_CARDS.map((card) => card.id));
+      for (const type of typeOrder) {
+        const candidates = [];
 
-      return {
-        id: `F-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        owner: defender === this.state.players[0] ? 0 : 1,
-        type,
-        selection,
-        claimHas: areaHas,   // correct claim
-        areaHasShip: areaHas,
-        truth: true,
-        resolved: true,
-        forced: true,
-        blink: true,
-      };
+        if (type === 'row') {
+          for (let row = 0; row < ROWS; row++) {
+            const selection = { row };
+            const cells = hintCells(type, selection);
+            if (cells.some(({ r, c }) => !covered[r][c])) candidates.push(selection);
+          }
+        } else if (type === 'col') {
+          for (let col = 0; col < COLS; col++) {
+            const selection = { col };
+            const cells = hintCells(type, selection);
+            if (cells.some(({ r, c }) => !covered[r][c])) candidates.push(selection);
+          }
+        } else if (type === 'area') {
+          for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+              const selection = { center: { r, c } };
+              const cells = hintCells(type, selection);
+              if (cells.some((cell) => !covered[cell.r][cell.c])) candidates.push(selection);
+            }
+          }
+        } else {
+          for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+              const selection = { cell: { r, c } };
+              const cells = hintCells(type, selection);
+              if (cells.some((cell) => !covered[cell.r][cell.c])) candidates.push(selection);
+            }
+          }
+        }
+
+        if (candidates.length === 0) continue;
+
+        const selection = candidates[randInt(candidates.length)];
+        const cells = hintCells(type, selection);
+        const areaHas = evaluateAreaHasUnexposedShip(defender, cells);
+
+        return {
+          id: `F-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          owner: defender === this.state.players[0] ? 0 : 1,
+          type,
+          selection,
+          claimHas: areaHas,   // correct claim
+          areaHasShip: areaHas,
+          truth: true,
+          resolved: true,
+          forced: true,
+          blink: true,
+        };
+      }
+
+      return null;
     },
 
     fireShot() {
