@@ -436,6 +436,7 @@
           past: [], // judged or forced correct hints
         },
         bonusShotsNextTurn: 0, // bonus shots next time this player attacks
+        pendingFakeWrongPlacement: false, // deferred true-hint placement at start of this player's next turn
       };
     },
 
@@ -533,8 +534,37 @@
         this.showPanel('#playPanel');
         this.renderPlay();
         this.startTurnTimer();
+        this.handleDeferredTurnStartEffects();
         return;
       }
+    },
+
+    async handleDeferredTurnStartEffects() {
+      const s = this.state;
+      if (!s || s.phase !== TurnPhase.PLAY) return;
+      if (this._handlingDeferredTurnStartEffects) return;
+
+      const curIdx = this.getCurrentPlayerIdx();
+      const cur = this.getCurrentPlayer();
+      if (!cur.pendingFakeWrongPlacement) return;
+
+      this._handlingDeferredTurnStartEffects = true;
+      cur.pendingFakeWrongPlacement = false;
+
+      await this.promptTrueHintPlacement({
+        targetPlayerIdx: this.getOpponentPlayerIdx(),
+        chooserPlayerIdx: curIdx,
+        allowedTypes: HINT_TYPES.map((card) => card.id),
+        lockType: false,
+        title: 'Deferred FAKE Effect',
+        body: 'Your opponent guessed your fake hint wrongly on the previous turn. Place a TRUE hint on the opponent field now.',
+        selectionPrompt: 'Select hint type and tap a cell.',
+        confirmText: 'Create TRUE Hint',
+        successToast: 'TRUE hint added on opponent field.',
+      });
+
+      this._handlingDeferredTurnStartEffects = false;
+      this.renderPlay();
     },
 
     // Setup rendering
@@ -1462,18 +1492,6 @@
       });
     },
 
-    promptPassToPlayer(playerIdx, bodyText) {
-      return new Promise((resolve) => {
-        const playerName = this.getPlayerName(playerIdx);
-        this.openPassOverlay(playerName, bodyText);
-        const onClick = () => {
-          this.els.readyBtn.removeEventListener('click', onClick);
-          resolve();
-        };
-        this.els.readyBtn.addEventListener('click', onClick);
-      });
-    },
-
     promptTrueHintPlacement(options) {
       return new Promise((resolve) => {
         const s = this.state;
@@ -1737,7 +1755,7 @@
         if (attackerGuess === 'fake') {
           return 'Effect: attacker places a TRUE hint on the defender field, with hint type restricted to the defender consumed hint types.';
         }
-        return 'Effect: defender places a TRUE hint on the attacker field.';
+        return 'Effect: defender will place a TRUE hint on the attacker field at the start of defender\'s next turn.';
       }
 
       const hintWasTrue = hint.truth === true;
@@ -1822,21 +1840,10 @@
           return;
         }
 
-        await this.promptPassToPlayer(opponentIdx, `Pass the device. ${this.getPlayerName(opponentIdx)} chooses a TRUE hint to place on ${this.getPlayerName(currentIdx)}'s field.`);
-        this.pauseTimer(true);
-        await this.promptTrueHintPlacement({
-          targetPlayerIdx: currentIdx,
-          chooserPlayerIdx: opponentIdx,
-          allowedTypes: HINT_TYPES.map((card) => card.id),
-          lockType: false,
-          title: 'Wrong FAKE Guess',
-          body: 'Choose any hint type and place a TRUE hint on the attacker field.',
-          selectionPrompt: 'Select hint type and tap a cell.',
-          confirmText: 'Create TRUE Hint',
-          successToast: 'TRUE hint added on attacker field.',
-        });
-        await this.promptPassToPlayer(currentIdx, `Pass back to ${this.getPlayerName(currentIdx)} to continue the turn.`);
-        this.pauseTimer(false);
+        opp.pendingFakeWrongPlacement = true;
+        this.toast(`${this.getPlayerName(opponentIdx)} will place a TRUE hint next turn.`, 'good');
+        await this.sleep(900);
+        this.renderPlay();
         return;
       }
 
