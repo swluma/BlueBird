@@ -15,11 +15,15 @@
     { id: 'S2', name: 'Destroyer', len: 2 },
   ];
 
-  const HINT_CARDS = [
+  const HINT_TYPES = [
     { id: 'row', name: 'Row', desc: 'Hint about a row.' },
     { id: 'col', name: 'Column', desc: 'Hint about a column.' },
     { id: 'area', name: '3×3 Area', desc: 'Hint about a 3×3 area.' },
     { id: 'cell', name: 'Single Cell', desc: 'Hint about one cell.' },
+  ];
+  const HINT_CARDS = [
+    ...HINT_TYPES,
+    { id: 'fake', name: 'Fake', desc: 'Pretend to place a hint. No area is recorded.' },
   ];
 
   const TurnPhase = {
@@ -76,6 +80,7 @@
   }
 
   function hintCells(type, selection) {
+    if (type === 'fake') return [];
     if (type === 'row') {
       const r = selection.row;
       return Array.from({ length: COLS }, (_, c) => ({ r, c }));
@@ -101,6 +106,7 @@
 
   function hintRect(type, selection) {
     // Return bounding rect in grid units: {r,c,w,h}
+    if (type === 'fake') return { r: 0, c: 0, w: 0, h: 0 };
     if (type === 'row') return { r: selection.row, c: 0, w: COLS, h: 1 };
     if (type === 'col') return { r: 0, c: selection.col, w: 1, h: ROWS };
     if (type === 'area') {
@@ -151,6 +157,10 @@
     return Math.round(n / 2);
   }
 
+  function isHintType(type) {
+    return HINT_TYPES.some((card) => card.id === type);
+  }
+
   const icons = {
     rotateSVG: () => `
       <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -175,6 +185,11 @@
     cell: () => `
       <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
         <path d="M12 2l3 3h-2v4h-2V5H9l3-3zm0 20l-3-3h2v-4h2v4h2l-3 3zM2 12l3-3v2h4v2H5v2l-3-3zm20 0l-3 3v-2h-4v-2h4V9l3 3z" />
+      </svg>
+    `,
+    fake: () => `
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <path d="M12 2a6 6 0 0 0-6 6h2a4 4 0 1 1 4 4 1 1 0 0 0-1 1v3h2v-2.1A6 6 0 0 0 12 2zm-1 17h2v3h-2v-3z" />
       </svg>
     `,
   };
@@ -262,6 +277,7 @@
         guessEffectsInfoBtn: $('#guessEffectsInfoBtn'),
         guessTrueBtn: $('#guessTrueBtn'),
         guessLieBtn: $('#guessLieBtn'),
+        guessFakeBtn: $('#guessFakeBtn'),
         confirmShotBtn: $('#confirmShotBtn'),
 
         logLine: $('#logLine'),
@@ -278,6 +294,8 @@
         resultGuess: $('#resultGuess'),
         resultEffect: $('#resultEffect'),
         resultContinueBtn: $('#resultContinueBtn'),
+        exhaustHintTitle: $('#exhaustHintTitle'),
+        exhaustHintBody: $('#exhaustHintBody'),
 
         toast: $('#toast'),
 
@@ -304,6 +322,7 @@
 
       this.els.guessTrueBtn.addEventListener('click', () => this.setGuess(true));
       this.els.guessLieBtn.addEventListener('click', () => this.setGuess(false));
+      this.els.guessFakeBtn.addEventListener('click', () => this.setGuess('fake'));
       this.els.confirmShotBtn.addEventListener('click', () => this.confirmShot());
       this.els.guessEffectsInfoBtn.addEventListener('click', () => this.openInfoOverlay('effectsInfoOverlay'));
 
@@ -452,6 +471,15 @@
               open: false,
               type: 'cell',
               selection: null,
+              allowedTypes: HINT_TYPES.map((card) => card.id),
+              targetPlayerIdx: 1,
+              chooserPlayerIdx: 0,
+              lockType: false,
+              title: 'All Hint Cards Used',
+              body: 'Choose a hint type, then tap a position on the copied opponent field. This creates a TRUE hint on the opponent field.',
+              selectionPrompt: 'Select hint type and tap a cell.',
+              confirmText: 'Create TRUE Hint',
+              successToast: 'TRUE hint added.',
             },
             targetSel: null,
           },
@@ -934,6 +962,8 @@
       s.ui.play.incoming.judged = false;
       s.ui.play.exhaustReward.open = false;
       s.ui.play.exhaustReward.selection = null;
+      s.ui.play.exhaustReward.allowedTypes = HINT_TYPES.map((card) => card.id);
+      s.ui.play.exhaustReward.lockType = false;
       this.els.exhaustHintOverlay.classList.add('hidden');
 
       this.renderPlay();
@@ -1012,6 +1042,7 @@
 
       const incoming = opp.hints.active && !opp.hints.active.resolved;
       if (incoming && !s.ui.play.incoming.judged) {
+        if (incoming.type === 'fake') return 'Incoming hint is active. Select a target cell, choose TRUE/LIE/FAKE, then confirm.';
         return 'Incoming hint is active. Select a target cell, choose TRUE/LIE, then confirm.';
       }
       if (s.turn.shotsRemaining > 0 && !s.ui.play.targetSel) {
@@ -1090,7 +1121,7 @@
       const s = this.state;
       const opp = this.getOpponentPlayer();
 
-      const incoming = opp.hints.active && !opp.hints.active.resolved;
+      const incoming = (opp.hints.active && !opp.hints.active.resolved) ? opp.hints.active : null;
       const needsJudgement = incoming && !s.ui.play.incoming.judged;
 
       if (!needsJudgement) {
@@ -1101,18 +1132,28 @@
       this.els.guessBar.classList.remove('hidden');
 
       // Describe incoming hint briefly
-      const h = opp.hints.active;
-      const claimText = this.describeHint(h, { claimed: true }).replace(/^Hint:\s*/, '');
-      this.els.incomingHintDesc.textContent = `The opponent says: ${claimText}`;
+      if (incoming.type === 'fake') {
+        this.els.incomingHintDesc.textContent = 'The opponent says: this hint card is FAKE.';
+      } else {
+        const claimText = this.describeHint(incoming, { claimed: true }).replace(/^Hint:\s*/, '');
+        this.els.incomingHintDesc.textContent = `The opponent says: ${claimText}`;
+      }
+
+      if (incoming.type !== 'fake' && s.ui.play.incoming.guess === 'fake') {
+        s.ui.play.incoming.guess = null;
+      }
 
       this.els.guessTrueBtn.classList.toggle('primary', s.ui.play.incoming.guess === true);
       this.els.guessLieBtn.classList.toggle('primary', s.ui.play.incoming.guess === false);
+      this.els.guessFakeBtn.classList.toggle('primary', s.ui.play.incoming.guess === 'fake');
+      this.els.guessFakeBtn.classList.toggle('hidden', incoming.type !== 'fake');
 
       const targetChosen = !!s.ui.play.targetSel;
       this.els.confirmShotBtn.disabled = !(targetChosen && (s.ui.play.incoming.guess !== null));
     },
 
     describeHint(hint, { claimed }) {
+      if (hint.type === 'fake') return 'Hint: FAKE.';
       const hasTxt = claimed ? (hint.claimHas ? 'HAS' : 'HAS NOT') : (hint.areaHasShip ? 'HAS' : 'HAS NOT');
 
       if (hint.type === 'row') return `Hint: Row ${hint.selection.row + 1} ${hasTxt} a ship cell.`;
@@ -1127,6 +1168,7 @@
 
       // Past hints (correct display)
       for (const hint of defenderPlayer.hints.past) {
+        if (hint.type === 'fake') continue;
         const overlay = this.makeHintOverlay(hint, defenderPlayer, { mode: 'past', correct: true });
         if (hint.blink) overlay.classList.add('blink');
         layerEl.appendChild(overlay);
@@ -1135,15 +1177,17 @@
       // Active hint (claimed colors) - only show to opponent on target board, and to self too (so you remember)
       if (defenderPlayer.hints.active && !defenderPlayer.hints.active.resolved) {
         const hint = defenderPlayer.hints.active;
-        const overlay = this.makeHintOverlay(hint, defenderPlayer, { mode: 'active', correct: false });
-        layerEl.appendChild(overlay);
+        if (hint.type !== 'fake') {
+          const overlay = this.makeHintOverlay(hint, defenderPlayer, { mode: 'active', correct: false });
+          layerEl.appendChild(overlay);
+        }
       }
 
       // Preview hint while placing on own board
       if (view === 'self') {
         const s = this.state;
         const uiHint = s.ui.play.hint;
-        if (uiHint.selectedCardId && uiHint.selection) {
+        if (uiHint.selectedCardId && uiHint.selection && uiHint.selectedCardId !== 'fake') {
           const preview = {
             id: 'preview',
             owner: this.getCurrentPlayerIdx(),
@@ -1243,18 +1287,27 @@
       const s = this.state;
       const cur = this.getCurrentPlayer();
       const uiHint = s.ui.play.hint;
+      const isFake = uiHint.selectedCardId === 'fake';
 
       // Toggle buttons
       this.els.toggleHasBtn.classList.toggle('active', uiHint.claimHas === true);
       this.els.toggleHasNotBtn.classList.toggle('active', uiHint.claimHas === false);
+      this.els.toggleHasBtn.classList.toggle('hidden', isFake);
+      this.els.toggleHasNotBtn.classList.toggle('hidden', isFake);
 
-      // Confirm hint enabled when a card is selected and selection made
-      const canConfirm = !!uiHint.selectedCardId && !!uiHint.selection && !uiHint.setThisTurn && s.turn.shotsRemaining > 0;
+      // Confirm hint enabled when a card is selected and placement requirements are met
+      const canConfirm = !!uiHint.selectedCardId && (isFake || !!uiHint.selection) && !uiHint.setThisTurn && s.turn.shotsRemaining > 0;
       this.els.confirmHintBtn.disabled = !canConfirm;
 
       // Truth preview text
       if (!uiHint.selectedCardId) {
         this.els.ownHintTruthText.innerHTML = 'Select a hint card to place one hint (optional, once per turn).';
+        return;
+      }
+      if (isFake) {
+        this.els.ownHintTruthText.innerHTML =
+          'This card is <b>FAKE</b>. No area is selected and no HAS/HAS NOT choice is used.<br>' +
+          '<span class="muted tiny">Confirm directly to pretend placing a hint. It will not be recorded as a past hint.</span>';
         return;
       }
       if (!uiHint.selection) {
@@ -1287,6 +1340,7 @@
 
     setHasToggle(has) {
       if (!this.state) return;
+      if (this.state.ui.play.hint.selectedCardId === 'fake') return;
       this.state.ui.play.hint.claimHas = has;
       // Recompute truth and update colors
       this.renderPlay();
@@ -1309,6 +1363,7 @@
       const cur = this.getCurrentPlayer();
       const uiHint = s.ui.play.hint;
       if (!uiHint.selectedCardId) return;
+      if (uiHint.selectedCardId === 'fake') return;
 
       // Set selection depending on card
       if (uiHint.selectedCardId === 'row') uiHint.selection = { row: r };
@@ -1324,15 +1379,20 @@
       const curIdx = this.getCurrentPlayerIdx();
       const cur = this.getCurrentPlayer();
       const uiHint = s.ui.play.hint;
+      const isFake = uiHint.selectedCardId === 'fake';
 
-      if (!uiHint.selectedCardId || !uiHint.selection) return;
+      if (!uiHint.selectedCardId) return;
+      if (!isFake && !uiHint.selection) return;
       if (uiHint.setThisTurn) return;
       if (s.turn.shotsRemaining <= 0) return;
 
-      // Determine truth and areaHasShip
-      const cells = hintCells(uiHint.selectedCardId, uiHint.selection);
-      const areaHas = evaluateAreaHasUnexposedShip(cur, cells);
-      const truth = uiHint.claimHas ? areaHas : !areaHas;
+      let areaHas = null;
+      let truth = 'fake';
+      if (!isFake) {
+        const cells = hintCells(uiHint.selectedCardId, uiHint.selection);
+        areaHas = evaluateAreaHasUnexposedShip(cur, cells);
+        truth = uiHint.claimHas ? areaHas : !areaHas;
+      }
 
       // Consume card
       const card = cur.cards.find(c => c.id === uiHint.selectedCardId);
@@ -1343,8 +1403,8 @@
         id: `H-${Date.now()}-${Math.random().toString(16).slice(2)}`,
         owner: curIdx, // the defender who owns the hinted board
         type: uiHint.selectedCardId,
-        selection: structuredClone(uiHint.selection),
-        claimHas: uiHint.claimHas,
+        selection: isFake ? null : structuredClone(uiHint.selection),
+        claimHas: isFake ? null : uiHint.claimHas,
         areaHasShip: areaHas,
         truth: truth, // whether claim matches reality
         resolved: false,
@@ -1355,8 +1415,9 @@
       uiHint.setThisTurn = true;
       uiHint.selectedCardId = null;
       uiHint.selection = null;
+      uiHint.computedTruth = null;
 
-      this.toast('Hint placed for your opponent.', 'good');
+      this.toast(isFake ? 'Fake hint played.' : 'Hint placed for your opponent.', 'good');
 
       const hintsLeft = cur.cards.filter((c) => !c.used).length;
       if (hintsLeft === 0) {
@@ -1367,15 +1428,59 @@
     },
 
     promptExhaustedCardsTrueHint() {
+      return this.promptTrueHintPlacement({
+        targetPlayerIdx: this.getOpponentPlayerIdx(),
+        chooserPlayerIdx: this.getCurrentPlayerIdx(),
+        allowedTypes: HINT_TYPES.map((card) => card.id),
+        lockType: false,
+        title: 'All Hint Cards Used',
+        body: 'Choose a hint type, then tap a position on the copied opponent field. This creates a TRUE hint on the opponent field.',
+        selectionPrompt: 'Select hint type and tap a cell.',
+        confirmText: 'Create TRUE Hint',
+        successToast: 'TRUE hint added on opponent field.',
+      });
+    },
+
+    promptPassToPlayer(playerIdx, bodyText) {
+      return new Promise((resolve) => {
+        const playerName = this.getPlayerName(playerIdx);
+        this.openPassOverlay(playerName, bodyText);
+        const onClick = () => {
+          this.els.readyBtn.removeEventListener('click', onClick);
+          resolve();
+        };
+        this.els.readyBtn.addEventListener('click', onClick);
+      });
+    },
+
+    promptTrueHintPlacement(options) {
       return new Promise((resolve) => {
         const s = this.state;
         if (!s || s.phase !== TurnPhase.PLAY) {
           resolve(false);
           return;
         }
-        s.ui.play.exhaustReward.open = true;
-        s.ui.play.exhaustReward.type = 'cell';
-        s.ui.play.exhaustReward.selection = null;
+
+        const allowed = Array.from(new Set((options.allowedTypes || []).filter((type) => isHintType(type))));
+        if (allowed.length === 0) {
+          resolve(false);
+          return;
+        }
+
+        const reward = s.ui.play.exhaustReward;
+        reward.open = true;
+        reward.allowedTypes = allowed;
+        reward.targetPlayerIdx = options.targetPlayerIdx;
+        reward.chooserPlayerIdx = options.chooserPlayerIdx;
+        reward.lockType = !!options.lockType;
+        reward.type = allowed.includes(options.type) ? options.type : allowed[0];
+        reward.selection = null;
+        reward.title = options.title || 'Create TRUE Hint';
+        reward.body = options.body || 'Choose a hint type and place a TRUE hint.';
+        reward.selectionPrompt = options.selectionPrompt || 'Select hint type and tap a cell.';
+        reward.confirmText = options.confirmText || 'Create TRUE Hint';
+        reward.successToast = options.successToast || 'TRUE hint added.';
+
         this._resolveExhaustHint = resolve;
         this.pauseTimer(true);
         this.renderExhaustHintModal();
@@ -1383,10 +1488,18 @@
       });
     },
 
+    getConsumedHintTypes(player) {
+      return player.cards
+        .filter((card) => card.used && isHintType(card.id))
+        .map((card) => card.id);
+    },
+
     setExhaustHintType(type) {
       const s = this.state;
       if (!s || !this.isExhaustHintModalOpen()) return;
-      if (!HINT_CARDS.some((card) => card.id === type)) return;
+      if (!isHintType(type)) return;
+      const reward = s.ui.play.exhaustReward;
+      if (!reward.allowedTypes.includes(type) || reward.lockType) return;
       s.ui.play.exhaustReward.type = type;
       s.ui.play.exhaustReward.selection = null;
       this.renderExhaustHintModal();
@@ -1396,6 +1509,8 @@
       const s = this.state;
       if (!s || !this.isExhaustHintModalOpen()) return;
 
+      const reward = s.ui.play.exhaustReward;
+      if (!reward.allowedTypes.includes(reward.type)) return;
       const type = s.ui.play.exhaustReward.type;
       if (type === 'row') s.ui.play.exhaustReward.selection = { row: r };
       else if (type === 'col') s.ui.play.exhaustReward.selection = { col: c };
@@ -1409,15 +1524,22 @@
       const s = this.state;
       if (!s || !this.isExhaustHintModalOpen()) return;
 
-      const cur = this.getCurrentPlayer();
-      const opp = this.getOpponentPlayer();
       const reward = s.ui.play.exhaustReward;
+      const chooser = s.players[reward.chooserPlayerIdx];
+      const target = s.players[reward.targetPlayerIdx];
 
-      this.renderCellsFromTarget(this.els.exhaustHintBoard, cur, opp);
-      this.renderHintsLayer(this.els.exhaustHintLayer, opp, { view: 'opponent' });
+      this.els.exhaustHintTitle.textContent = reward.title;
+      this.els.exhaustHintBody.textContent = reward.body;
+      this.els.confirmExhaustHintBtn.textContent = reward.confirmText;
+
+      this.renderCellsFromTarget(this.els.exhaustHintBoard, chooser, target);
+      this.renderHintsLayer(this.els.exhaustHintLayer, target, { view: 'opponent' });
 
       const typeButtons = this.els.exhaustTypePicker.querySelectorAll('.exhaustTypeBtn');
       for (const btn of typeButtons) {
+        const enabled = reward.allowedTypes.includes(btn.dataset.type);
+        btn.classList.toggle('hidden', !enabled);
+        btn.disabled = !enabled || reward.lockType;
         btn.classList.toggle('active', btn.dataset.type === reward.type);
       }
 
@@ -1428,14 +1550,14 @@
           claimHas: true,
           areaHasShip: true,
         };
-        const overlay = this.makeHintOverlay(previewHint, opp, { mode: 'past', correct: true });
+        const overlay = this.makeHintOverlay(previewHint, target, { mode: 'past', correct: true });
         overlay.classList.add('rewardPreview');
         overlay.classList.remove('has', 'hasnot', 'depletedHas');
         this.els.exhaustHintLayer.appendChild(overlay);
 
         this.els.exhaustHintSelectionText.textContent = `Selected: ${this.describeHintSelectionOnly(reward.type, reward.selection)}`;
       } else {
-        this.els.exhaustHintSelectionText.textContent = 'Select hint type and tap a cell.';
+        this.els.exhaustHintSelectionText.textContent = reward.selectionPrompt;
       }
 
       this.els.confirmExhaustHintBtn.disabled = !reward.selection;
@@ -1455,14 +1577,14 @@
       const reward = s.ui.play.exhaustReward;
       if (!reward.selection) return;
 
-      const oppIdx = this.getOpponentPlayerIdx();
-      const opp = this.getOpponentPlayer();
+      const targetIdx = reward.targetPlayerIdx;
+      const target = s.players[targetIdx];
       const cells = hintCells(reward.type, reward.selection);
-      const areaHas = evaluateAreaHasUnexposedShip(opp, cells);
+      const areaHas = evaluateAreaHasUnexposedShip(target, cells);
 
       const hint = {
         id: `E-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        owner: oppIdx,
+        owner: targetIdx,
         type: reward.type,
         selection: structuredClone(reward.selection),
         claimHas: areaHas,
@@ -1472,10 +1594,10 @@
         forced: true,
         blink: true,
       };
-      opp.hints.past.push(hint);
+      target.hints.past.push(hint);
 
       this.closeExhaustHintModal(true);
-      this.toast('TRUE hint added on opponent field.', 'good');
+      this.toast(reward.successToast, 'good');
       setTimeout(() => {
         hint.blink = false;
         this.renderPlay();
@@ -1487,6 +1609,7 @@
       if (!s || !s.ui || !s.ui.play || !s.ui.play.exhaustReward) return;
 
       s.ui.play.exhaustReward.open = false;
+      s.ui.play.exhaustReward.selection = null;
       this.els.exhaustHintOverlay.classList.add('hidden');
       this.pauseTimer(false);
       const resolve = this._resolveExhaustHint;
@@ -1515,7 +1638,7 @@
         this.fireShot();
       } else {
         // Wait for guess + confirm
-        this.toast('Choose TRUE/LIE, then confirm.', 'good');
+        this.toast(incoming.type === 'fake' ? 'Choose TRUE/LIE/FAKE, then confirm.' : 'Choose TRUE/LIE, then confirm.', 'good');
       }
     },
 
@@ -1543,39 +1666,39 @@
         return;
       }
       if (s.ui.play.incoming.guess === null) {
-        this.toast('Choose TRUE or LIE first.', 'bad');
+        this.toast(incoming.type === 'fake' ? 'Choose TRUE, LIE, or FAKE first.' : 'Choose TRUE or LIE first.', 'bad');
         return;
       }
 
       // Resolve hint reveal overlay (timer paused)
       this.pauseTimer(true);
 
-      const guessTrue = s.ui.play.incoming.guess;
-      const hintTruth = incoming.truth; // true = the hint was TRUE, false = it was a LIE
-
+      const attackerGuess = s.ui.play.incoming.guess;
+      const hintTruth = incoming.truth;
       const resultIsTrue = hintTruth === true;
-      const bigText = resultIsTrue ? 'It was TRUE!' : 'It was a LIE!';
-      const bigColor = resultIsTrue ? 'var(--good)' : 'var(--danger)';
-      const guessText = `You guessed ${guessTrue ? 'TRUE' : 'LIE'}`;
-      const guessColor = guessTrue ? 'var(--good)' : 'var(--danger)';
+      const bigText = incoming.type === 'fake' ? 'It was FAKE!' : (resultIsTrue ? 'It was TRUE!' : 'It was a LIE!');
+      const bigColor = incoming.type === 'fake' ? 'var(--accent)' : (resultIsTrue ? 'var(--good)' : 'var(--danger)');
+      const guessText = `You guessed ${attackerGuess === 'fake' ? 'FAKE' : (attackerGuess ? 'TRUE' : 'LIE')}`;
+      const guessColor = attackerGuess === 'fake' ? 'var(--accent)' : (attackerGuess ? 'var(--good)' : 'var(--danger)');
 
       // Build effect text (effects apply to the hint owner (defender): opponent)
-      const effectText = this.getEffectDescription(incoming, guessTrue);
+      const effectText = this.getEffectDescription(incoming, attackerGuess);
 
       await this.showResultOverlay(bigText, bigColor, guessText, guessColor, effectText);
 
-      // Mark hint as resolved and move to past (correct display)
+      // Mark hint as resolved.
       incoming.resolved = true;
       opp.hints.active = null;
-
-      const pastHint = { ...incoming };
-      opp.hints.past.push(pastHint);
+      if (incoming.type !== 'fake') {
+        const pastHint = { ...incoming };
+        opp.hints.past.push(pastHint);
+      }
 
       // Resume timer for effect stage (as requested)
       this.pauseTimer(false);
 
       // Apply effects with small animations
-      await this.applyHintEffects(incoming, guessTrue);
+      await this.applyHintEffects(incoming, attackerGuess);
 
       // Mark judgement done and proceed with the actual shot
       s.ui.play.incoming.judged = true;
@@ -1583,16 +1706,22 @@
       this.fireShot();
     },
 
-    getEffectDescription(hint, attackerGuessedTrue) {
+    getEffectDescription(hint, attackerGuess) {
       // Effects apply to hint owner (defender).
+      if (hint.type === 'fake') {
+        if (attackerGuess === 'fake') {
+          return 'Effect: attacker places a TRUE hint on the defender field, with hint type restricted to the defender consumed hint types.';
+        }
+        return 'Effect: defender places a TRUE hint on the attacker field.';
+      }
+
       const hintWasTrue = hint.truth === true;
-      const gTxt = attackerGuessedTrue ? 'believed' : 'doubted';
 
       if (hintWasTrue) {
-        if (attackerGuessedTrue) return 'Effect: none (they trusted a true hint).';
+        if (attackerGuess === true) return 'Effect: none (they trusted a true hint).';
         return 'Effect: about half of revivable destroyed cells on the defender board (misses and hits on ships that are not fully sunk) will revive (rounded).';
       } else {
-        if (attackerGuessedTrue) return 'Effect: defender gains 2 bonus shots on their next turn.';
+        if (attackerGuess === true) return 'Effect: defender gains 2 bonus shots on their next turn.';
         return 'Effect: a correct hint will be added about the defender (forced).';
       }
     },
@@ -1627,14 +1756,69 @@
       });
     },
 
-    async applyHintEffects(hint, attackerGuessedTrue) {
+    async applyHintEffects(hint, attackerGuess) {
       const opp = this.getOpponentPlayer(); // defender (hint owner)
       const cur = this.getCurrentPlayer();  // attacker
+
+      if (hint.type === 'fake') {
+        const currentIdx = this.getCurrentPlayerIdx();
+        const opponentIdx = this.getOpponentPlayerIdx();
+
+        if (attackerGuess === 'fake') {
+          const consumed = this.getConsumedHintTypes(opp);
+          if (consumed.length === 0) {
+            const randomType = HINT_TYPES[randInt(HINT_TYPES.length)].id;
+            await this.promptTrueHintPlacement({
+              targetPlayerIdx: opponentIdx,
+              chooserPlayerIdx: currentIdx,
+              allowedTypes: [randomType],
+              lockType: true,
+              type: randomType,
+              title: 'Correct FAKE Guess',
+              body: 'Place a TRUE hint on the opponent field. No consumed hint types were available, so a random type was locked in.',
+              selectionPrompt: `Type locked to ${HINT_TYPES.find((card) => card.id === randomType)?.name || randomType}. Tap a cell.`,
+              confirmText: 'Create TRUE Hint',
+              successToast: 'TRUE hint added on opponent field.',
+            });
+            return;
+          }
+
+          await this.promptTrueHintPlacement({
+            targetPlayerIdx: opponentIdx,
+            chooserPlayerIdx: currentIdx,
+            allowedTypes: consumed,
+            lockType: false,
+            title: 'Correct FAKE Guess',
+            body: 'Place a TRUE hint on the opponent field. You may choose only hint types already consumed by that opponent.',
+            selectionPrompt: 'Select allowed hint type and tap a cell.',
+            confirmText: 'Create TRUE Hint',
+            successToast: 'TRUE hint added on opponent field.',
+          });
+          return;
+        }
+
+        await this.promptPassToPlayer(opponentIdx, `Pass the device. ${this.getPlayerName(opponentIdx)} chooses a TRUE hint to place on ${this.getPlayerName(currentIdx)}'s field.`);
+        this.pauseTimer(true);
+        await this.promptTrueHintPlacement({
+          targetPlayerIdx: currentIdx,
+          chooserPlayerIdx: opponentIdx,
+          allowedTypes: HINT_TYPES.map((card) => card.id),
+          lockType: false,
+          title: 'Wrong FAKE Guess',
+          body: 'Choose any hint type and place a TRUE hint on the attacker field.',
+          selectionPrompt: 'Select hint type and tap a cell.',
+          confirmText: 'Create TRUE Hint',
+          successToast: 'TRUE hint added on attacker field.',
+        });
+        await this.promptPassToPlayer(currentIdx, `Pass back to ${this.getPlayerName(currentIdx)} to continue the turn.`);
+        this.pauseTimer(false);
+        return;
+      }
 
       const hintWasTrue = hint.truth === true;
 
       if (hintWasTrue) {
-        if (attackerGuessedTrue) {
+        if (attackerGuess === true) {
           // no effect
           return;
         }
@@ -1663,7 +1847,7 @@
       }
 
       // Hint was a lie
-      if (attackerGuessedTrue) {
+      if (attackerGuess === true) {
         // Defender gets bonus shot next turn
         opp.bonusShotsNextTurn += 2;
         this.toast('+2 SHOTS', 'good', true);
@@ -1700,6 +1884,7 @@
       // not-yet-covered cell (covered = included in any past hint on defender's field).
       const covered = makeGrid(false);
       for (const pastHint of defender.hints.past) {
+        if (!isHintType(pastHint.type)) continue;
         const pastCells = hintCells(pastHint.type, pastHint.selection);
         for (const { r, c } of pastCells) covered[r][c] = true;
       }
@@ -1715,7 +1900,7 @@
       }
       if (!uncoveredExists) return null;
 
-      const typeOrder = shuffle(HINT_CARDS.map((card) => card.id));
+      const typeOrder = shuffle(HINT_TYPES.map((card) => card.id));
       for (const type of typeOrder) {
         const candidates = [];
 

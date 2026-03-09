@@ -170,6 +170,7 @@
             <div class="guessBtns">
               <button class="btn" id="guessTrueBtn">TRUE</button>
               <button class="btn" id="guessLieBtn">LIE</button>
+              <button class="btn hidden" id="guessFakeBtn">FAKE</button>
               <button class="btn primary" id="confirmShotBtn" disabled>Confirm Shot</button>
             </div>
           </div>
@@ -315,7 +316,7 @@
       <div class="modal infoModal exhaustHintModal">
         <div class="modalTitle" id="exhaustHintTitle">All Hint Cards Used</div>
         <div class="modalBody infoBody">
-          <p>
+          <p id="exhaustHintBody">
             Choose a hint type, then tap a position on the copied opponent field. This creates a TRUE hint on the opponent field.
           </p>
           <div class="exhaustTypePicker" id="exhaustTypePicker" role="group" aria-label="Select hint type">
