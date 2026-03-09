@@ -168,6 +168,17 @@
     return { cell: { r: randInt(ROWS), c: randInt(COLS) } };
   }
 
+  function createUnconstrainedFakeDisguise() {
+    // Intentionally unconstrained: fake-hint disguise may overlap fully with past hints
+    // and therefore may reveal no new information.
+    const type = HINT_TYPES[randInt(HINT_TYPES.length)].id;
+    return {
+      type,
+      selection: randomHintSelection(type),
+      claimHas: Math.random() < 0.5,
+    };
+  }
+
   const icons = {
     rotateSVG: () => `
       <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -1442,9 +1453,10 @@
       let fakeSelection = null;
       let fakeClaimHas = null;
       if (isFake) {
-        fakeType = HINT_TYPES[randInt(HINT_TYPES.length)].id;
-        fakeSelection = randomHintSelection(fakeType);
-        fakeClaimHas = Math.random() < 0.5;
+        const disguise = createUnconstrainedFakeDisguise();
+        fakeType = disguise.type;
+        fakeSelection = disguise.selection;
+        fakeClaimHas = disguise.claimHas;
       }
 
       const hint = {
