@@ -192,6 +192,7 @@
               </div>
 
               <div class="muted tiny" id="ownHintTruthText">Select a hint card to place one hint (optional, once per turn).</div>
+              <button class="btn infoBtn ownHintInfoBtn" id="placeHintEffectsInfoBtn" type="button">Hint Effects (Place Hint)</button>
 
               <div class="hintControls">
                 <div class="toggle" role="group" aria-label="Has / Has not">
@@ -326,6 +327,49 @@
         </div>
         <div class="modalActions">
           <button class="btn primary" id="closeEffectsInfoBtn" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- INFO: PLACE HINT EFFECTS -->
+    <div class="modalOverlay hidden" id="placeHintInfoOverlay" aria-modal="true" role="dialog" aria-labelledby="placeHintInfoTitle">
+      <div class="modal infoModal">
+        <div class="modalTitle" id="placeHintInfoTitle">Hint Effects When You Place a Hint</div>
+        <div class="modalBody infoBody">
+          <p>
+            Use this table when deciding which hint to place on your own board.
+          </p>
+          <div class="infoTableWrap">
+            <table class="infoTable">
+              <thead>
+                <tr>
+                  <th>Hint you place</th>
+                  <th>If opponent guesses correctly</th>
+                  <th>If opponent guesses wrongly</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="fxToken fxTrue">TRUE</span></td>
+                  <td>No effect.</td>
+                  <td>About half of revivable destroyed cells on your board revive (misses and hits on ships that are not fully sunk), rounded.</td>
+                </tr>
+                <tr>
+                  <td><span class="fxToken fxLie">LIE</span></td>
+                  <td>A forced correct hint is added about your board.</td>
+                  <td>You gain 2 bonus shots on your next turn.</td>
+                </tr>
+                <tr>
+                  <td><span class="fxToken fxFake">FAKE</span></td>
+                  <td>Opponent places a TRUE hint on your field (hint type is restricted to your consumed hint types).</td>
+                  <td>You place a TRUE hint on the opponent field at the start of your next turn.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modalActions">
+          <button class="btn primary" id="closePlaceHintInfoBtn" type="button">Close</button>
         </div>
       </div>
     </div>

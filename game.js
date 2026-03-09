@@ -239,9 +239,12 @@
         timerText: $('#timerText'),
         effectsInfoBtn: $('#effectsInfoBtn'),
         flowInfoBtn: $('#flowInfoBtn'),
+        placeHintEffectsInfoBtn: $('#placeHintEffectsInfoBtn'),
         effectsInfoOverlay: $('#effectsInfoOverlay'),
+        placeHintInfoOverlay: $('#placeHintInfoOverlay'),
         flowInfoOverlay: $('#flowInfoOverlay'),
         closeEffectsInfoBtn: $('#closeEffectsInfoBtn'),
+        closePlaceHintInfoBtn: $('#closePlaceHintInfoBtn'),
         closeFlowInfoBtn: $('#closeFlowInfoBtn'),
         exhaustHintOverlay: $('#exhaustHintOverlay'),
         exhaustHintBoard: $('#exhaustHintBoard'),
@@ -354,8 +357,10 @@
 
       this.els.restartBtn.addEventListener('click', () => window.location.reload());
       this.els.effectsInfoBtn.addEventListener('click', () => this.openInfoOverlay('effectsInfoOverlay'));
+      this.els.placeHintEffectsInfoBtn.addEventListener('click', () => this.openInfoOverlay('placeHintInfoOverlay'));
       this.els.flowInfoBtn.addEventListener('click', () => this.openInfoOverlay('flowInfoOverlay'));
       this.els.closeEffectsInfoBtn.addEventListener('click', () => this.closeInfoOverlay('effectsInfoOverlay'));
+      this.els.closePlaceHintInfoBtn.addEventListener('click', () => this.closeInfoOverlay('placeHintInfoOverlay'));
       this.els.closeFlowInfoBtn.addEventListener('click', () => this.closeInfoOverlay('flowInfoOverlay'));
       this.els.exhaustTypePicker.addEventListener('click', (ev) => {
         const btn = ev.target.closest('.exhaustTypeBtn');
@@ -368,6 +373,9 @@
 
       this.els.effectsInfoOverlay.addEventListener('click', (ev) => {
         if (ev.target === this.els.effectsInfoOverlay) this.closeInfoOverlay('effectsInfoOverlay');
+      });
+      this.els.placeHintInfoOverlay.addEventListener('click', (ev) => {
+        if (ev.target === this.els.placeHintInfoOverlay) this.closeInfoOverlay('placeHintInfoOverlay');
       });
       this.els.flowInfoOverlay.addEventListener('click', (ev) => {
         if (ev.target === this.els.flowInfoOverlay) this.closeInfoOverlay('flowInfoOverlay');
@@ -397,6 +405,7 @@
 
     closeInfoOverlays() {
       this.closeInfoOverlay('effectsInfoOverlay');
+      this.closeInfoOverlay('placeHintInfoOverlay');
       this.closeInfoOverlay('flowInfoOverlay');
     },
 

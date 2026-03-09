@@ -533,6 +533,9 @@ a{color:inherit}
   color:var(--good);
   font-weight:700;
 }
+.ownHintInfoBtn{
+  align-self:flex-start;
+}
 
 /* Hint controls */
 .hintControls{
