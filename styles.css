@@ -639,14 +639,28 @@ a{color:inherit}
 .infoModal{
   width:min(760px, 100%);
   text-align:left;
+  max-height: calc(100vh - 36px);
+  display:flex;
+  flex-direction:column;
+}
+.infoModal .modalBody{
+  overflow-y:auto;
+  padding-right:4px;
 }
 .infoBody p{
   margin:0 0 10px 0;
+}
+.infoSectionTitle{
+  margin:12px 0 8px;
+  font-size:14px;
+  font-weight:900;
+  color:var(--text);
 }
 .infoTableWrap{
   border:1px solid var(--line);
   border-radius:14px;
   overflow:auto;
+  max-height:240px;
   background:#0b1020aa;
 }
 .infoTable{

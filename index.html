@@ -250,6 +250,7 @@
             <span class="fxToken fxFake">FAKE</span>.
             Effects depend on the real hint and your guess.
           </p>
+          <h3 class="infoSectionTitle">When You Guess</h3>
           <div class="infoTableWrap">
             <table class="infoTable">
               <thead>
@@ -289,6 +290,35 @@
                   <td><span class="fxToken fxFake">FAKE</span></td>
                   <td><span class="fxToken fxFake">FAKE</span></td>
                   <td>You place a TRUE hint on the opponent field (hint type is restricted to opponent consumed hint types).</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <h3 class="infoSectionTitle">When You Place a Hint</h3>
+          <div class="infoTableWrap">
+            <table class="infoTable">
+              <thead>
+                <tr>
+                  <th>Hint you place</th>
+                  <th>If opponent guesses correctly</th>
+                  <th>If opponent guesses wrongly</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="fxToken fxTrue">TRUE</span></td>
+                  <td>No effect.</td>
+                  <td>About half of revivable destroyed cells on your board revive (misses and hits on ships that are not fully sunk), rounded.</td>
+                </tr>
+                <tr>
+                  <td><span class="fxToken fxLie">LIE</span></td>
+                  <td>A forced correct hint is added about your board.</td>
+                  <td>You gain 2 bonus shots on your next turn.</td>
+                </tr>
+                <tr>
+                  <td><span class="fxToken fxFake">FAKE</span></td>
+                  <td>Opponent places a TRUE hint on your field (hint type is restricted to your consumed hint types).</td>
+                  <td>You place a TRUE hint on the opponent field at the start of your next turn.</td>
                 </tr>
               </tbody>
             </table>
