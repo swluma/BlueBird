@@ -241,9 +241,11 @@
         flowInfoBtn: $('#flowInfoBtn'),
         placeHintEffectsInfoBtn: $('#placeHintEffectsInfoBtn'),
         effectsInfoOverlay: $('#effectsInfoOverlay'),
+        guessHintInfoOverlay: $('#guessHintInfoOverlay'),
         placeHintInfoOverlay: $('#placeHintInfoOverlay'),
         flowInfoOverlay: $('#flowInfoOverlay'),
         closeEffectsInfoBtn: $('#closeEffectsInfoBtn'),
+        closeGuessHintInfoBtn: $('#closeGuessHintInfoBtn'),
         closePlaceHintInfoBtn: $('#closePlaceHintInfoBtn'),
         closeFlowInfoBtn: $('#closeFlowInfoBtn'),
         exhaustHintOverlay: $('#exhaustHintOverlay'),
@@ -350,7 +352,7 @@
       this.els.guessLieBtn.addEventListener('click', () => this.setGuess(false));
       this.els.guessFakeBtn.addEventListener('click', () => this.setGuess('fake'));
       this.els.confirmShotBtn.addEventListener('click', () => this.confirmShot());
-      this.els.guessEffectsInfoBtn.addEventListener('click', () => this.openInfoOverlay('effectsInfoOverlay'));
+      this.els.guessEffectsInfoBtn.addEventListener('click', () => this.openInfoOverlay('guessHintInfoOverlay'));
 
       this.els.readyBtn.addEventListener('click', () => this.onReady());
       this.els.forfeitBtn.addEventListener('click', () => this.confirmEndGame());
@@ -360,6 +362,7 @@
       this.els.placeHintEffectsInfoBtn.addEventListener('click', () => this.openInfoOverlay('placeHintInfoOverlay'));
       this.els.flowInfoBtn.addEventListener('click', () => this.openInfoOverlay('flowInfoOverlay'));
       this.els.closeEffectsInfoBtn.addEventListener('click', () => this.closeInfoOverlay('effectsInfoOverlay'));
+      this.els.closeGuessHintInfoBtn.addEventListener('click', () => this.closeInfoOverlay('guessHintInfoOverlay'));
       this.els.closePlaceHintInfoBtn.addEventListener('click', () => this.closeInfoOverlay('placeHintInfoOverlay'));
       this.els.closeFlowInfoBtn.addEventListener('click', () => this.closeInfoOverlay('flowInfoOverlay'));
       this.els.exhaustTypePicker.addEventListener('click', (ev) => {
@@ -373,6 +376,9 @@
 
       this.els.effectsInfoOverlay.addEventListener('click', (ev) => {
         if (ev.target === this.els.effectsInfoOverlay) this.closeInfoOverlay('effectsInfoOverlay');
+      });
+      this.els.guessHintInfoOverlay.addEventListener('click', (ev) => {
+        if (ev.target === this.els.guessHintInfoOverlay) this.closeInfoOverlay('guessHintInfoOverlay');
       });
       this.els.placeHintInfoOverlay.addEventListener('click', (ev) => {
         if (ev.target === this.els.placeHintInfoOverlay) this.closeInfoOverlay('placeHintInfoOverlay');
@@ -405,6 +411,7 @@
 
     closeInfoOverlays() {
       this.closeInfoOverlay('effectsInfoOverlay');
+      this.closeInfoOverlay('guessHintInfoOverlay');
       this.closeInfoOverlay('placeHintInfoOverlay');
       this.closeInfoOverlay('flowInfoOverlay');
     },

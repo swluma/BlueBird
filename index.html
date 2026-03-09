@@ -164,7 +164,7 @@
               <div class="guessTitle">Opponent's hint is active</div>
               <div class="guessDesc" id="incomingHintDesc">The opponent says: ...</div>
               <div class="guessNote">Reminder: check the Hint Effects table before choosing TRUE or LIE.</div>
-              <button class="btn infoBtn guessInfoBtn" id="guessEffectsInfoBtn" type="button">Hint Effects</button>
+              <button class="btn infoBtn guessInfoBtn" id="guessEffectsInfoBtn" type="button">Hint Effects (Guess)</button>
             </div>
 
             <div class="guessBtns">
@@ -327,6 +327,66 @@
         </div>
         <div class="modalActions">
           <button class="btn primary" id="closeEffectsInfoBtn" type="button">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- INFO: GUESS HINT EFFECTS -->
+    <div class="modalOverlay hidden" id="guessHintInfoOverlay" aria-modal="true" role="dialog" aria-labelledby="guessHintInfoTitle">
+      <div class="modal infoModal">
+        <div class="modalTitle" id="guessHintInfoTitle">Hint Effects When You Guess</div>
+        <div class="modalBody infoBody">
+          <p>
+            Use this table when an incoming hint is active and you must choose
+            <span class="fxToken fxTrue">TRUE</span>, <span class="fxToken fxLie">LIE</span>, or
+            <span class="fxToken fxFake">FAKE</span>.
+          </p>
+          <div class="infoTableWrap">
+            <table class="infoTable">
+              <thead>
+                <tr>
+                  <th>Real hint</th>
+                  <th>Your guess</th>
+                  <th>Effect</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="fxToken fxTrue">TRUE</span></td>
+                  <td><span class="fxToken fxLie">LIE</span> / <span class="fxToken fxFake">FAKE</span></td>
+                  <td>About half of revivable destroyed cells on the opponent board revive (misses and hits on ships that are not fully sunk), rounded.</td>
+                </tr>
+                <tr>
+                  <td><span class="fxToken fxTrue">TRUE</span></td>
+                  <td><span class="fxToken fxTrue">TRUE</span></td>
+                  <td>No effect.</td>
+                </tr>
+                <tr>
+                  <td><span class="fxToken fxLie">LIE</span></td>
+                  <td><span class="fxToken fxTrue">TRUE</span> / <span class="fxToken fxFake">FAKE</span></td>
+                  <td>Opponent gains 2 bonus shots on their next turn.</td>
+                </tr>
+                <tr>
+                  <td><span class="fxToken fxLie">LIE</span></td>
+                  <td><span class="fxToken fxLie">LIE</span></td>
+                  <td>A forced correct hint is added about the opponent.</td>
+                </tr>
+                <tr>
+                  <td><span class="fxToken fxFake">FAKE</span></td>
+                  <td><span class="fxToken fxTrue">TRUE</span> / <span class="fxToken fxLie">LIE</span></td>
+                  <td>Opponent places a TRUE hint on your field at the start of opponent's next turn.</td>
+                </tr>
+                <tr>
+                  <td><span class="fxToken fxFake">FAKE</span></td>
+                  <td><span class="fxToken fxFake">FAKE</span></td>
+                  <td>You place a TRUE hint on the opponent field (hint type is restricted to opponent consumed hint types).</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modalActions">
+          <button class="btn primary" id="closeGuessHintInfoBtn" type="button">Close</button>
         </div>
       </div>
     </div>
