@@ -668,6 +668,18 @@ a{color:inherit}
 .infoTable tbody tr:last-child td{
   border-bottom:none;
 }
+.fxToken{
+  font-weight:900;
+}
+.fxTrue{
+  color:var(--good);
+}
+.fxLie{
+  color:var(--danger);
+}
+.fxFake{
+  color:var(--accent);
+}
 .infoList{
   margin:0;
   padding-left:20px;

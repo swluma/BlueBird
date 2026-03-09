@@ -242,11 +242,13 @@
     <!-- INFO: EFFECTS -->
     <div class="modalOverlay hidden" id="effectsInfoOverlay" aria-modal="true" role="dialog" aria-labelledby="effectsInfoTitle">
       <div class="modal infoModal">
-        <div class="modalTitle" id="effectsInfoTitle">Hint Effects (TRUE / LIE)</div>
+        <div class="modalTitle" id="effectsInfoTitle">Hint Effects (TRUE / LIE / FAKE)</div>
         <div class="modalBody infoBody">
           <p>
-            A player may place one hint per turn on their own board. The attacker can guess if that hint is TRUE or a LIE.
-            Effects depend on the real truth and your guess.
+            A player may place one hint per turn on their own board. You guess
+            <span class="fxToken fxTrue">TRUE</span>, <span class="fxToken fxLie">LIE</span>, or
+            <span class="fxToken fxFake">FAKE</span>.
+            Effects depend on the real hint and your guess.
           </p>
           <div class="infoTableWrap">
             <table class="infoTable">
@@ -259,24 +261,34 @@
               </thead>
               <tbody>
                 <tr>
-                  <td>TRUE</td>
-                  <td>TRUE</td>
+                  <td><span class="fxToken fxTrue">TRUE</span></td>
+                  <td><span class="fxToken fxLie">LIE</span> / <span class="fxToken fxFake">FAKE</span></td>
+                  <td>About half of revivable destroyed cells on the opponent board revive (misses and hits on ships that are not fully sunk), rounded.</td>
+                </tr>
+                <tr>
+                  <td><span class="fxToken fxTrue">TRUE</span></td>
+                  <td><span class="fxToken fxTrue">TRUE</span></td>
                   <td>No effect.</td>
                 </tr>
                 <tr>
-                  <td>TRUE</td>
-                  <td>LIE</td>
-                  <td>Your opponent revives about half of revivable destroyed cells (misses and hits on ships that are not fully sunk), rounded.</td>
+                  <td><span class="fxToken fxLie">LIE</span></td>
+                  <td><span class="fxToken fxTrue">TRUE</span> / <span class="fxToken fxFake">FAKE</span></td>
+                  <td>Opponent gains 2 bonus shots on their next turn.</td>
                 </tr>
                 <tr>
-                  <td>LIE</td>
-                  <td>TRUE</td>
-                  <td>Your opponent gains 2 bonus shots next turn.</td>
+                  <td><span class="fxToken fxLie">LIE</span></td>
+                  <td><span class="fxToken fxLie">LIE</span></td>
+                  <td>A forced correct hint is added about the opponent.</td>
                 </tr>
                 <tr>
-                  <td>LIE</td>
-                  <td>LIE</td>
-                  <td>A forced correct hint is added for your opponent.</td>
+                  <td><span class="fxToken fxFake">FAKE</span></td>
+                  <td><span class="fxToken fxTrue">TRUE</span> / <span class="fxToken fxLie">LIE</span></td>
+                  <td>Opponent places a TRUE hint on your field at the start of opponent's next turn.</td>
+                </tr>
+                <tr>
+                  <td><span class="fxToken fxFake">FAKE</span></td>
+                  <td><span class="fxToken fxFake">FAKE</span></td>
+                  <td>You place a TRUE hint on the opponent field (hint type is restricted to opponent consumed hint types).</td>
                 </tr>
               </tbody>
             </table>
@@ -302,7 +314,7 @@
             <li>Turn start: current player receives base shots (plus any bonus).</li>
             <li>Optional hint: before the first shot, reveal your own board and place one hint card.</li>
             <li>Attack: choose a target cell on the opponent board.</li>
-            <li>If an incoming hint is active, attacker guesses TRUE or LIE, confirms, then effects are applied.</li>
+            <li>If an incoming hint is active, you guess TRUE or LIE, confirm, then effects are applied.</li>
             <li>Shot resolves as hit or miss. Hits can grant extra shots if enabled.</li>
             <li>When shots end, pass device to the next player.</li>
             <li>Game ends when one side sinks all enemy ships, or if someone ends the game.</li>
