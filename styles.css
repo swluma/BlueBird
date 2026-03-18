@@ -244,6 +244,10 @@ a{color:inherit}
   gap:10px;
   margin-top:12px;
 }
+.startActions{
+  justify-content:flex-start;
+  flex-wrap:wrap;
+}
 .roomActions{
   align-items:flex-end;
 }
@@ -715,6 +719,9 @@ a{color:inherit}
   z-index:200;
   padding:18px;
 }
+#roomPanel{
+  z-index:190;
+}
 .modal{
   width:min(520px, 100%);
   border-radius:20px;
@@ -723,6 +730,22 @@ a{color:inherit}
   box-shadow: 0 20px 80px #00000088;
   padding:16px;
   text-align:center;
+}
+.roomModal{
+  width:min(920px, 100%);
+  text-align:left;
+  max-height:calc(100vh - 36px);
+  overflow-y:auto;
+}
+.roomModalHead{
+  margin-bottom:16px;
+}
+.roomModalTopActions{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
 }
 .modalTitle{
   font-size:20px;
@@ -741,6 +764,12 @@ a{color:inherit}
 .infoModal .modalBody{
   overflow-y:auto;
   padding-right:4px;
+}
+@media (max-width: 720px){
+  .roomModalTopActions{
+    width:100%;
+    justify-content:space-between;
+  }
 }
 .infoBody p{
   margin:0 0 10px 0;

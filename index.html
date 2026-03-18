@@ -65,57 +65,13 @@
             <input id="extraShotToggle" type="checkbox" checked />
           </label>
         </div>
-        <button class="btn primary" id="startBtn">Start</button>
+        <div class="footerRow startActions">
+          <button class="btn primary" id="startBtn">Start</button>
+          <button class="btn hidden" id="roomInfoBtn" type="button">Room Info</button>
+        </div>
         <p class="tiny muted">
           English UI only. Works offline. Best on a phone in landscape.
         </p>
-      </section>
-
-      <!-- ROOM WAITING -->
-      <section class="panel hidden" id="roomPanel">
-        <div class="panelHead">
-          <div>
-            <h1 id="roomPanelTitle">Room Session</h1>
-            <p class="muted" id="roomPanelLead">Preparing local-dev room transport.</p>
-          </div>
-          <div class="playBadges">
-            <div class="pill" id="roomPanelMode">Host</div>
-            <div class="pill" id="roomPanelTransport">Transport: local-dev</div>
-          </div>
-        </div>
-
-        <div class="roomLayout">
-          <div class="card panelCard">
-            <div class="cardTitle">Session</div>
-            <div class="roomFacts">
-              <div class="roomFact"><span>Player</span><b id="roomPlayerName">Player</b></div>
-              <div class="roomFact"><span>Room</span><b id="roomCodeText">----</b></div>
-              <div class="roomFact"><span>Connection</span><b id="roomConnectionText">Connecting...</b></div>
-              <div class="roomFact"><span>Phase</span><b id="roomPhaseText">connecting</b></div>
-            </div>
-            <div class="notice info" id="roomDevNotice">
-              Local-dev transport is active. Room lifecycle is testable now; full authoritative gameplay sync remains a follow-up.
-            </div>
-          </div>
-
-          <div class="card panelCard">
-            <div class="cardTitle">Players</div>
-            <div class="roomPlayers" id="roomPlayers"></div>
-            <div class="muted tiny" id="roomWaitingText">Waiting for room status...</div>
-          </div>
-        </div>
-
-        <div class="notice hidden" id="roomErrorNotice"></div>
-
-        <div class="footerRow roomActions">
-          <div class="roomButtons">
-            <button class="btn" id="roomReadyBtn" type="button">Ready Up</button>
-            <button class="btn primary" id="roomStartBtn" type="button" disabled>Start Match</button>
-            <button class="btn" id="roomRetryBtn" type="button">Retry</button>
-            <button class="btn danger" id="roomLocalBtn" type="button">Continue In Local Mode</button>
-          </div>
-          <div class="muted tiny" id="roomLastActionText">No room actions yet.</div>
-        </div>
       </section>
 
       <!-- SETUP -->
@@ -287,6 +243,58 @@
         <div class="resultEffect" id="resultEffect">â€”</div>
         <div class="modalActions">
           <button class="btn primary hidden" id="resultContinueBtn">Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROOM OVERLAY -->
+    <div class="modalOverlay hidden" id="roomPanel" aria-modal="true" role="dialog" aria-labelledby="roomPanelTitle">
+      <div class="modal roomModal">
+        <div class="panelHead roomModalHead">
+          <div>
+            <div class="modalTitle" id="roomPanelTitle">Room Session</div>
+            <p class="muted" id="roomPanelLead">Preparing local-dev room transport.</p>
+          </div>
+          <div class="roomModalTopActions">
+            <div class="playBadges">
+              <div class="pill" id="roomPanelMode">Host</div>
+              <div class="pill" id="roomPanelTransport">Transport: local-dev</div>
+            </div>
+            <button class="btn" id="closeRoomInfoBtn" type="button">Close</button>
+          </div>
+        </div>
+
+        <div class="roomLayout">
+          <div class="card panelCard">
+            <div class="cardTitle">Session</div>
+            <div class="roomFacts">
+              <div class="roomFact"><span>Player</span><b id="roomPlayerName">Player</b></div>
+              <div class="roomFact"><span>Room</span><b id="roomCodeText">----</b></div>
+              <div class="roomFact"><span>Connection</span><b id="roomConnectionText">Connecting...</b></div>
+              <div class="roomFact"><span>Phase</span><b id="roomPhaseText">connecting</b></div>
+            </div>
+            <div class="notice info" id="roomDevNotice">
+              Local-dev transport is active. Room lifecycle is testable now; full authoritative gameplay sync remains a follow-up.
+            </div>
+          </div>
+
+          <div class="card panelCard">
+            <div class="cardTitle">Players</div>
+            <div class="roomPlayers" id="roomPlayers"></div>
+            <div class="muted tiny" id="roomWaitingText">Waiting for room status...</div>
+          </div>
+        </div>
+
+        <div class="notice hidden" id="roomErrorNotice"></div>
+
+        <div class="footerRow roomActions">
+          <div class="roomButtons">
+            <button class="btn" id="roomReadyBtn" type="button">Ready Up</button>
+            <button class="btn primary" id="roomStartBtn" type="button" disabled>Start Match</button>
+            <button class="btn" id="roomRetryBtn" type="button">Retry</button>
+            <button class="btn danger" id="roomLocalBtn" type="button">Continue In Local Mode</button>
+          </div>
+          <div class="muted tiny" id="roomLastActionText">No room actions yet.</div>
         </div>
       </div>
     </div>

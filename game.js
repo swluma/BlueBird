@@ -270,6 +270,8 @@
         turnTimerInput: $('#turnTimerInput'),
         timerToggleBtn: $('#timerToggleBtn'),
         extraShotToggle: $('#extraShotToggle'),
+        roomInfoBtn: $('#roomInfoBtn'),
+        closeRoomInfoBtn: $('#closeRoomInfoBtn'),
 
         roomPanelTitle: $('#roomPanelTitle'),
         roomPanelLead: $('#roomPanelLead'),
@@ -360,6 +362,8 @@
     bind() {
       this.els.startBtn.addEventListener('click', () => this.startGame());
       this.els.timerToggleBtn.addEventListener('click', () => this.setTimerEnabled(!this.startTimerEnabled));
+      this.els.roomInfoBtn.addEventListener('click', () => this.openRoomModal());
+      this.els.closeRoomInfoBtn.addEventListener('click', () => this.closeRoomModal());
       this.els.roomReadyBtn.addEventListener('click', () => this.toggleRoomReady());
       this.els.roomStartBtn.addEventListener('click', () => this.startRoomMatch());
       this.els.roomRetryBtn.addEventListener('click', () => this.retryRoomConnection());
@@ -413,6 +417,9 @@
       this.els.flowInfoOverlay.addEventListener('click', (ev) => {
         if (ev.target === this.els.flowInfoOverlay) this.closeInfoOverlay('flowInfoOverlay');
       });
+      this.els.roomPanel.addEventListener('click', (ev) => {
+        if (ev.target === this.els.roomPanel) this.closeRoomModal();
+      });
 
       window.addEventListener('resize', () => {
         if (!this.state) return;
@@ -420,7 +427,10 @@
         if (this.state.phase === TurnPhase.PLAY) this.renderPlay();
       });
       window.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Escape') this.closeInfoOverlays();
+        if (ev.key === 'Escape') {
+          this.closeInfoOverlays();
+          this.closeRoomModal();
+        }
       });
       window.addEventListener('beforeunload', () => {
         if (this.roomClient) this.roomClient.disconnect();
@@ -446,6 +456,15 @@
       this.closeInfoOverlay('flowInfoOverlay');
     },
 
+    openRoomModal() {
+      if (!this.session || !this.session.isRoomPlay) return;
+      this.els.roomPanel.classList.remove('hidden');
+    },
+
+    closeRoomModal() {
+      this.els.roomPanel.classList.add('hidden');
+    },
+
     isExhaustHintModalOpen() {
       const s = this.state;
       return !!(s && s.ui && s.ui.play && s.ui.play.exhaustReward && s.ui.play.exhaustReward.open);
@@ -454,7 +473,6 @@
     // Panels
     showPanel(sel) {
       this.els.startPanel.classList.add('hidden');
-      this.els.roomPanel.classList.add('hidden');
       this.els.setupPanel.classList.add('hidden');
       this.els.playPanel.classList.add('hidden');
       $(sel).classList.remove('hidden');
@@ -476,9 +494,11 @@
       this.els.timerPill.classList.add('hidden');
       this.setPhasePill('Ready');
       this.updateSessionPills();
+      this.renderRoomLaunchControls();
       this.renderSessionNotice();
 
       if (this.session.isRoomPlay && this.session.isValid) {
+        this.showPanel('#startPanel');
         this.startRoomBootstrap();
         return;
       }
@@ -506,6 +526,13 @@
       }
     },
 
+    renderRoomLaunchControls() {
+      const validRoom = !!(this.session && this.session.isRoomPlay && this.session.isValid);
+      this.els.roomInfoBtn.classList.toggle('hidden', !validRoom);
+      this.els.startBtn.classList.toggle('hidden', validRoom);
+      this.els.startBtn.disabled = validRoom;
+    },
+
     renderSessionNotice(forceVisible = false) {
       const errors = (this.session && this.session.validationErrors) || [];
       const show = forceVisible || errors.length > 0;
@@ -522,9 +549,9 @@
     },
 
     async startRoomBootstrap() {
-      this.showPanel('#roomPanel');
       this.setPhasePill('Room');
       this.renderRoomPanel();
+      this.openRoomModal();
 
       this.roomClient = new RoomClientAPI.RoomClient(this.session);
       this.roomClient.subscribe((nextState) => {
@@ -644,12 +671,15 @@
       this.session = SessionAPI.createLocalFallbackSession(this.session, reason ? [reason] : []);
       this.roomState = RoomAPI.createInitialRoomState(this.session);
       this.updateSessionPills();
+      this.renderRoomLaunchControls();
       this.renderSessionNotice(true);
       this.setPhasePill('Ready');
+      this.closeRoomModal();
       this.showPanel('#startPanel');
     },
 
     beginRoomBackedGame() {
+      this.closeRoomModal();
       const playerNames = this.getRoomPlayerNames();
       this.startGameWithOptions({
         playerNames,
