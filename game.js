@@ -748,10 +748,21 @@
     reportGameAction(type, payload) {
       if (!this.state || !this.state.multiplayer || !this.state.multiplayer.enabled) return;
       if (!this.roomClient || !this.roomState || !this.roomState.gameStarted) return;
-      const enrichedPayload = Object.assign({}, payload || {}, {
-        syncState: this.buildSyncStateSnapshot(),
-      });
+      const includeSyncState = this.shouldAttachSyncState(type);
+      const enrichedPayload = Object.assign({}, payload || {});
+      if (includeSyncState) {
+        enrichedPayload.syncState = this.buildSyncStateSnapshot();
+      }
       this.roomClient.sendGameAction(type, enrichedPayload);
+    },
+
+    shouldAttachSyncState(type) {
+      if (!this.state || this.state.phase !== TurnPhase.SETUP) return true;
+      // Do not stream in-progress setup board edits to the opponent.
+      // Setup sync is pushed only after lock-in transition snapshots.
+      if (type === RoomAPI.GAME_ACTIONS.PLACE_SHIP) return false;
+      if (type === RoomAPI.GAME_ACTIONS.CONFIRM_FLEET) return false;
+      return true;
     },
 
     buildSyncStateSnapshot() {
