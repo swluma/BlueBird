@@ -23,6 +23,9 @@
           <span id="timerText">--</span>
         </div>
         <div class="status">
+          <div class="pill" id="modePill">Mode: Local</div>
+          <div class="pill hidden" id="roomPill">Room: ----</div>
+          <div class="pill hidden" id="connectionPill">Offline</div>
           <div class="pill" id="phasePill">Ready</div>
         </div>
         <div class="infoBtns">
@@ -36,6 +39,7 @@
       <!-- START -->
       <section class="panel" id="startPanel">
         <h1>New Game</h1>
+        <div class="notice hidden" id="sessionNotice"></div>
         <p class="muted">
           Place your fleet, then take turns attacking. Before you shoot, you may place one hint on <b>your own</b> board for your opponent.
           Hints can be <b>true or a bluff</b>.
@@ -65,6 +69,54 @@
         <p class="tiny muted">
           English UI only. Works offline. Best on a phone in landscape.
         </p>
+      </section>
+
+      <!-- ROOM WAITING -->
+      <section class="panel hidden" id="roomPanel">
+        <div class="panelHead">
+          <div>
+            <h1 id="roomPanelTitle">Room Session</h1>
+            <p class="muted" id="roomPanelLead">Preparing local-dev room transport.</p>
+          </div>
+          <div class="playBadges">
+            <div class="pill" id="roomPanelMode">Host</div>
+            <div class="pill" id="roomPanelTransport">Transport: local-dev</div>
+          </div>
+        </div>
+
+        <div class="roomLayout">
+          <div class="card panelCard">
+            <div class="cardTitle">Session</div>
+            <div class="roomFacts">
+              <div class="roomFact"><span>Player</span><b id="roomPlayerName">Player</b></div>
+              <div class="roomFact"><span>Room</span><b id="roomCodeText">----</b></div>
+              <div class="roomFact"><span>Connection</span><b id="roomConnectionText">Connecting...</b></div>
+              <div class="roomFact"><span>Phase</span><b id="roomPhaseText">connecting</b></div>
+            </div>
+            <div class="notice info" id="roomDevNotice">
+              Local-dev transport is active. Room lifecycle is testable now; full authoritative gameplay sync remains a follow-up.
+            </div>
+          </div>
+
+          <div class="card panelCard">
+            <div class="cardTitle">Players</div>
+            <div class="roomPlayers" id="roomPlayers"></div>
+            <div class="muted tiny" id="roomWaitingText">Waiting for room status...</div>
+          </div>
+        </div>
+
+        <div class="notice hidden" id="roomErrorNotice"></div>
+
+        <div class="footerRow roomActions">
+          <div class="roomButtons">
+            <button class="btn" id="roomReadyBtn" type="button">Ready Up</button>
+            <button class="btn primary" id="roomStartBtn" type="button" disabled>Start Match</button>
+            <button class="btn" id="roomRetryBtn" type="button">Retry</button>
+            <button class="btn" id="roomReloadBtn" type="button">Reload</button>
+            <button class="btn danger" id="roomLocalBtn" type="button">Continue In Local Mode</button>
+          </div>
+          <div class="muted tiny" id="roomLastActionText">No room actions yet.</div>
+        </div>
       </section>
 
       <!-- SETUP -->
@@ -505,6 +557,10 @@
 
   </div>
 
+  <script src="session.js"></script>
+  <script src="room-state.js"></script>
+  <script src="transport.js"></script>
+  <script src="room-client.js"></script>
   <script src="game.js"></script>
 </body>
 </html>

@@ -32,6 +32,10 @@
     PLAY: 'play',
   };
 
+  const SessionAPI = window.BattleshipSession;
+  const RoomAPI = window.BattleshipRoomState;
+  const RoomClientAPI = window.BattleshipRoomClient;
+
   const $ = (sel) => document.querySelector(sel);
   const el = (tag, cls, text) => {
     const e = document.createElement(tag);
@@ -224,16 +228,15 @@
       this.bind();
       this.startTimerEnabled = false;
       this.renderStartTimerOption();
-
-      this.showPanel('#startPanel');
-      this.setPhasePill('Ready');
-      this.els.timerPill.classList.add('hidden');
-
       this.renderStaticBoards();
+      this.bootstrapSession();
     },
 
     cacheEls() {
       this.els = {
+        modePill: $('#modePill'),
+        roomPill: $('#roomPill'),
+        connectionPill: $('#connectionPill'),
         phasePill: $('#phasePill'),
         timerPill: $('#timerPill'),
         timerText: $('#timerText'),
@@ -256,8 +259,10 @@
         confirmExhaustHintBtn: $('#confirmExhaustHintBtn'),
 
         startPanel: $('#startPanel'),
+        roomPanel: $('#roomPanel'),
         setupPanel: $('#setupPanel'),
         playPanel: $('#playPanel'),
+        sessionNotice: $('#sessionNotice'),
 
         startBtn: $('#startBtn'),
         p1NameInput: $('#p1NameInput'),
@@ -265,6 +270,25 @@
         turnTimerInput: $('#turnTimerInput'),
         timerToggleBtn: $('#timerToggleBtn'),
         extraShotToggle: $('#extraShotToggle'),
+
+        roomPanelTitle: $('#roomPanelTitle'),
+        roomPanelLead: $('#roomPanelLead'),
+        roomPanelMode: $('#roomPanelMode'),
+        roomPanelTransport: $('#roomPanelTransport'),
+        roomPlayerName: $('#roomPlayerName'),
+        roomCodeText: $('#roomCodeText'),
+        roomConnectionText: $('#roomConnectionText'),
+        roomPhaseText: $('#roomPhaseText'),
+        roomPlayers: $('#roomPlayers'),
+        roomWaitingText: $('#roomWaitingText'),
+        roomErrorNotice: $('#roomErrorNotice'),
+        roomDevNotice: $('#roomDevNotice'),
+        roomReadyBtn: $('#roomReadyBtn'),
+        roomStartBtn: $('#roomStartBtn'),
+        roomRetryBtn: $('#roomRetryBtn'),
+        roomReloadBtn: $('#roomReloadBtn'),
+        roomLocalBtn: $('#roomLocalBtn'),
+        roomLastActionText: $('#roomLastActionText'),
 
         // Setup
         setupTitle: $('#setupTitle'),
@@ -337,6 +361,11 @@
     bind() {
       this.els.startBtn.addEventListener('click', () => this.startGame());
       this.els.timerToggleBtn.addEventListener('click', () => this.setTimerEnabled(!this.startTimerEnabled));
+      this.els.roomReadyBtn.addEventListener('click', () => this.toggleRoomReady());
+      this.els.roomStartBtn.addEventListener('click', () => this.startRoomMatch());
+      this.els.roomRetryBtn.addEventListener('click', () => this.retryRoomConnection());
+      this.els.roomReloadBtn.addEventListener('click', () => window.location.reload());
+      this.els.roomLocalBtn.addEventListener('click', () => this.continueInLocalMode('Room mode cancelled by user.'));
       this.els.randomBtn.addEventListener('click', () => this.randomPlace());
       this.els.resetBtn.addEventListener('click', () => this.resetPlacement());
       this.els.lockInBtn.addEventListener('click', () => this.lockIn());
@@ -395,6 +424,9 @@
       window.addEventListener('keydown', (ev) => {
         if (ev.key === 'Escape') this.closeInfoOverlays();
       });
+      window.addEventListener('beforeunload', () => {
+        if (this.roomClient) this.roomClient.disconnect();
+      });
     },
 
     openInfoOverlay(id) {
@@ -424,6 +456,7 @@
     // Panels
     showPanel(sel) {
       this.els.startPanel.classList.add('hidden');
+      this.els.roomPanel.classList.add('hidden');
       this.els.setupPanel.classList.add('hidden');
       this.els.playPanel.classList.add('hidden');
       $(sel).classList.remove('hidden');
@@ -431,6 +464,227 @@
 
     setPhasePill(text) {
       this.els.phasePill.textContent = text;
+    },
+
+    bootstrapSession() {
+      this.session = SessionAPI.resolveSession(window.location.search);
+      this.roomState = RoomAPI.createInitialRoomState(this.session);
+      this.roomClient = null;
+      this.roomLaunchConsumed = false;
+      if (this.session.playerName && !this.els.p1NameInput.value) {
+        this.els.p1NameInput.value = this.session.playerName;
+      }
+
+      this.els.timerPill.classList.add('hidden');
+      this.setPhasePill('Ready');
+      this.updateSessionPills();
+      this.renderSessionNotice();
+
+      if (this.session.isRoomPlay && this.session.isValid) {
+        this.startRoomBootstrap();
+        return;
+      }
+
+      this.showPanel('#startPanel');
+      if (this.session.isRoomPlay && !this.session.isValid) {
+        this.renderSessionNotice(true);
+      }
+    },
+
+    updateSessionPills() {
+      const modeLabel = this.session.mode === 'local'
+        ? 'Mode: Local'
+        : `Mode: ${this.session.isHost ? 'Host' : 'Join'}`;
+      this.els.modePill.textContent = modeLabel;
+
+      const showRoom = !!this.session.isRoomPlay;
+      this.els.roomPill.classList.toggle('hidden', !showRoom);
+      this.els.connectionPill.classList.toggle('hidden', !showRoom);
+
+      if (showRoom) {
+        this.els.roomPill.textContent = `Room: ${this.session.roomCode || '----'}`;
+        const status = this.roomState && this.roomState.connectionStatus ? this.roomState.connectionStatus : 'offline';
+        this.els.connectionPill.textContent = status;
+      }
+    },
+
+    renderSessionNotice(forceVisible = false) {
+      const errors = (this.session && this.session.validationErrors) || [];
+      const show = forceVisible || errors.length > 0;
+      this.els.sessionNotice.classList.toggle('hidden', !show);
+      this.els.sessionNotice.classList.remove('warn', 'error', 'info');
+      if (!show) {
+        this.els.sessionNotice.textContent = '';
+        return;
+      }
+
+      const label = this.session.isRoomPlay ? 'Room launch issue' : 'Session notice';
+      this.els.sessionNotice.classList.add(this.session.isRoomPlay ? 'warn' : 'info');
+      this.els.sessionNotice.textContent = `${label}: ${errors.join(' ')} Continuing in local mode is available below.`;
+    },
+
+    async startRoomBootstrap() {
+      this.showPanel('#roomPanel');
+      this.setPhasePill('Room');
+      this.renderRoomPanel();
+
+      this.roomClient = new RoomClientAPI.RoomClient(this.session);
+      this.roomClient.subscribe((nextState) => {
+        this.roomState = nextState;
+        this.updateSessionPills();
+        this.renderRoomPanel();
+        if (nextState.gameStarted && !this.roomLaunchConsumed) {
+          this.roomLaunchConsumed = true;
+          this.beginRoomBackedGame();
+        }
+      });
+
+      await this.roomClient.connect();
+    },
+
+    renderRoomPanel() {
+      if (!this.els.roomPanel) return;
+      const state = this.roomState || RoomAPI.createInitialRoomState(this.session);
+      const players = Array.isArray(state.players) ? state.players : [];
+      const localPlayer = players.find((player) => player.id === state.localPlayerId) || null;
+      const everyoneReady = players.length === this.session.maxPlayers && players.every((player) => player.isReady);
+
+      this.els.roomPanelTitle.textContent = this.session.isHost ? 'Host Room' : 'Join Room';
+      this.els.roomPanelLead.textContent = this.session.isHost
+        ? 'Waiting for another player to join this local-dev room.'
+        : 'Joining the room and waiting for the host to start.';
+      this.els.roomPanelMode.textContent = this.session.isHost ? 'Host' : 'Join';
+      this.els.roomPanelTransport.textContent = `Transport: ${state.transportKind || 'local-dev'}`;
+      this.els.roomDevNotice.textContent = this.session.wsUrl
+        ? 'A ws URL was provided, but this phase intentionally uses the built-in local-dev transport so same-PC testing works with npm start.'
+        : 'Local-dev transport is active. Room lifecycle is testable now; full authoritative gameplay sync remains a follow-up.';
+      this.els.roomPlayerName.textContent = this.session.playerName;
+      this.els.roomCodeText.textContent = this.session.roomCode || '----';
+      this.els.roomConnectionText.textContent = state.connectionStatus;
+      this.els.roomPhaseText.textContent = state.roomPhase;
+      this.els.roomWaitingText.textContent = this.makeRoomWaitingText(state, players, everyoneReady);
+      this.els.roomLastActionText.textContent = state.lastAction
+        ? `Last room action: ${state.lastAction.type}`
+        : 'No room actions yet.';
+
+      this.els.roomPlayers.innerHTML = '';
+      if (players.length === 0) {
+        const empty = el('div', 'muted tiny', 'No players connected yet.');
+        this.els.roomPlayers.appendChild(empty);
+      } else {
+        for (const player of players) {
+          const row = el('div', 'roomPlayerRow');
+          const meta = el('div', 'roomPlayerMeta');
+          const name = el('div', 'roomPlayerName', player.name);
+          const sub = el(
+            'div',
+            'roomPlayerSub',
+            `${player.isHost ? 'Host' : 'Guest'}${player.id === state.localPlayerId ? ' • You' : ''}`
+          );
+          const status = el(
+            'div',
+            `roomPlayerState ${player.isReady ? 'ready' : 'waiting'}`,
+            player.isReady ? 'READY' : 'WAITING'
+          );
+          meta.appendChild(name);
+          meta.appendChild(sub);
+          row.appendChild(meta);
+          row.appendChild(status);
+          this.els.roomPlayers.appendChild(row);
+        }
+      }
+
+      const showError = !!state.lastError;
+      this.els.roomErrorNotice.classList.toggle('hidden', !showError);
+      this.els.roomErrorNotice.classList.remove('warn', 'error', 'info');
+      if (showError) {
+        this.els.roomErrorNotice.classList.add('error');
+        this.els.roomErrorNotice.textContent = state.lastError;
+      } else {
+        this.els.roomErrorNotice.textContent = '';
+      }
+
+      const localReady = !!(localPlayer && localPlayer.isReady);
+      this.els.roomReadyBtn.textContent = localReady ? 'Set Not Ready' : 'Ready Up';
+      this.els.roomReadyBtn.disabled = !!state.roomClosed || state.gameStarted || state.connectionStatus === RoomAPI.CONNECTION_STATUS.ERROR;
+      this.els.roomStartBtn.disabled = !this.session.isHost || !everyoneReady || !!state.gameStarted || !!state.roomClosed;
+    },
+
+    makeRoomWaitingText(state, players, everyoneReady) {
+      if (state.roomClosed) return 'The room was closed. Continue locally or reload.';
+      if (state.connectionStatus === RoomAPI.CONNECTION_STATUS.ERROR) return state.lastError || 'Room connection failed.';
+      if (state.connectionStatus === RoomAPI.CONNECTION_STATUS.CONNECTING) return 'Connecting to local-dev room transport...';
+      if (state.gameStarted) return 'Match signalled. Launching the game flow...';
+      if (players.length < this.session.maxPlayers) return 'Waiting for opponent...';
+      if (!everyoneReady) return this.session.isHost ? 'Both players must ready up before the host can start.' : 'Waiting for both players to become ready.';
+      return this.session.isHost ? 'Room is ready. Start the match when you want.' : 'Room is ready. Waiting for host to start.';
+    },
+
+    toggleRoomReady() {
+      if (!this.roomClient || !this.roomState || this.roomState.roomClosed) return;
+      this.roomClient.toggleReady(!this.roomState.isReady);
+    },
+
+    startRoomMatch() {
+      if (!this.roomClient) return;
+      this.roomClient.startGame();
+    },
+
+    retryRoomConnection() {
+      if (!this.session.isRoomPlay || !this.session.isValid) {
+        this.continueInLocalMode('Retry was not possible. Switched to local mode.');
+        return;
+      }
+      window.location.reload();
+    },
+
+    continueInLocalMode(reason) {
+      if (this.roomClient) {
+        this.roomClient.disconnect();
+        this.roomClient = null;
+      }
+      this.session = SessionAPI.createLocalFallbackSession(this.session, reason ? [reason] : []);
+      this.roomState = RoomAPI.createInitialRoomState(this.session);
+      this.updateSessionPills();
+      this.renderSessionNotice(true);
+      this.setPhasePill('Ready');
+      this.showPanel('#startPanel');
+    },
+
+    beginRoomBackedGame() {
+      const playerNames = this.getRoomPlayerNames();
+      this.startGameWithOptions({
+        playerNames,
+        roomSession: this.session,
+      });
+    },
+
+    getRoomPlayerNames() {
+      const players = (this.roomState && this.roomState.players) || [];
+      const sorted = players.slice().sort((a, b) => {
+        if (a.isHost === b.isHost) return 0;
+        return a.isHost ? -1 : 1;
+      });
+      return [
+        (sorted[0] && sorted[0].name) || this.session.playerName || 'Player 1',
+        (sorted[1] && sorted[1].name) || 'Player 2',
+      ];
+    },
+
+    reportGameAction(type, payload) {
+      if (!this.state || !this.state.multiplayer || !this.state.multiplayer.enabled) return;
+      if (!this.roomClient || !this.roomState || !this.roomState.gameStarted) return;
+      this.roomClient.sendGameAction(type, payload);
+    },
+
+    reportSyncSnapshot(reason) {
+      if (!this.state) return;
+      this.reportGameAction(RoomAPI.GAME_ACTIONS.SYNC_SNAPSHOT, {
+        reason,
+        phase: this.state.phase,
+        currentPlayer: this.state.currentPlayer,
+        setupPlayer: this.state.setupPlayer,
+      });
     },
 
     // Game state
@@ -481,10 +735,43 @@
         this.normalizePlayerName(this.els.p2NameInput.value, 'Player 2'),
       ];
 
-      this.state = {
-        phase: TurnPhase.SETUP,
+      this.startGameWithOptions({
         config: { turnSeconds, timerEnabled, extraShotOnHit },
         playerNames,
+      });
+    },
+
+    startGameWithOptions(options = {}) {
+      const config = options.config || {
+        turnSeconds: clamp(parseInt(this.els.turnTimerInput.value || '60', 10), 15, 180),
+        timerEnabled: !!this.startTimerEnabled,
+        extraShotOnHit: !!this.els.extraShotToggle.checked,
+      };
+      const playerNames = Array.isArray(options.playerNames) && options.playerNames.length >= 2
+        ? options.playerNames.slice(0, 2)
+        : [
+            this.normalizePlayerName(this.els.p1NameInput.value, 'Player 1'),
+            this.normalizePlayerName(this.els.p2NameInput.value, 'Player 2'),
+          ];
+      const roomSession = options.roomSession || null;
+
+      this.state = {
+        phase: TurnPhase.SETUP,
+        config,
+        playerNames,
+        multiplayer: roomSession ? {
+          enabled: true,
+          mode: roomSession.mode,
+          roomCode: roomSession.roomCode,
+          transport: this.roomState ? this.roomState.transportKind : 'local-dev',
+          localOnlyDevWarning: true,
+        } : {
+          enabled: false,
+          mode: 'local',
+          roomCode: null,
+          transport: 'local-only',
+          localOnlyDevWarning: false,
+        },
         setupPlayer: 0,
         currentPlayer: 0,
         players: [this.newPlayerState(), this.newPlayerState()],
@@ -538,8 +825,11 @@
         }
       };
 
+      if (roomSession) {
+        this.setPhasePill('Room Setup');
+      }
       this.openPassOverlay(this.getPlayerName(0), `Get ready to place your ships. Keep the screen hidden while passing.`);
-      this.setPhasePill('Setup');
+      if (!roomSession) this.setPhasePill('Setup');
     },
 
     openPassOverlay(title, body, nextPhase = null, nextPlayer = null) {
@@ -759,6 +1049,13 @@
 
       player.ships.push({ id, len, origin: { ...origin }, orient });
       for (const { r, c } of cells) player.occupancy[r][c] = id;
+      this.reportGameAction(RoomAPI.GAME_ACTIONS.PLACE_SHIP, {
+        playerIndex: this.state ? this.state.setupPlayer : null,
+        shipId: id,
+        len,
+        origin: { ...origin },
+        orient,
+      });
       return true;
     },
 
@@ -794,6 +1091,13 @@
       if (ok) {
         ship.origin = origin;
         ship.orient = newOrient;
+        this.reportGameAction(RoomAPI.GAME_ACTIONS.PLACE_SHIP, {
+          playerIndex: this.state ? this.state.setupPlayer : null,
+          shipId,
+          len,
+          origin: { ...origin },
+          orient: newOrient,
+        });
       }
 
       // Restore occupancy (either new or old)
@@ -853,6 +1157,15 @@
       const pIdx = this.state.setupPlayer;
       const player = this.currentSetupPlayer();
       if (player.ships.length !== SHIPS.length) return;
+      this.reportGameAction(RoomAPI.GAME_ACTIONS.CONFIRM_FLEET, {
+        playerIndex: pIdx,
+        ships: player.ships.map((ship) => ({
+          id: ship.id,
+          len: ship.len,
+          origin: { ...ship.origin },
+          orient: ship.orient,
+        })),
+      });
 
       if (pIdx === 0) {
         // pass to player 2 setup
@@ -873,6 +1186,7 @@
       const p1Name = this.getPlayerName(0);
       this.openPassOverlay(p1Name, `Game starts! Hand the device to ${p1Name}. Keep the screen hidden while passing.`);
       this.setPhasePill('Play');
+      this.reportSyncSnapshot('both_fleets_confirmed');
     },
 
     // Board render helpers
@@ -1477,6 +1791,10 @@
       // Consume card
       const card = cur.cards.find(c => c.id === uiHint.selectedCardId);
       if (card) card.used = true;
+      this.reportGameAction(RoomAPI.GAME_ACTIONS.CONSUME_HINT, {
+        playerIndex: curIdx,
+        cardId: uiHint.selectedCardId,
+      });
 
       // Create hint
       let fakeType = null;
@@ -1509,6 +1827,15 @@
       uiHint.selectedCardId = null;
       uiHint.selection = null;
       uiHint.computedTruth = null;
+      this.reportGameAction(RoomAPI.GAME_ACTIONS.PLAY_HINT, {
+        owner: curIdx,
+        type: hint.type,
+        selection: hint.selection ? structuredClone(hint.selection) : null,
+        claimHas: hint.claimHas,
+        fakeType: hint.fakeType,
+        fakeSelection: hint.fakeSelection ? structuredClone(hint.fakeSelection) : null,
+        fakeClaimHas: hint.fakeClaimHas,
+      });
 
       this.toast(isFake ? 'Fake hint played.' : 'Hint placed for your opponent.', 'good');
 
@@ -1784,6 +2111,12 @@
 
       // Apply effects with small animations
       await this.applyHintEffects(incoming, attackerGuess);
+      this.reportGameAction(RoomAPI.GAME_ACTIONS.REVEAL_HINT_RESULT, {
+        hintId: incoming.id,
+        attackerGuess,
+        truth: incoming.truth,
+        type: incoming.type,
+      });
 
       // Mark judgement done and proceed with the actual shot
       s.ui.play.incoming.judged = true;
@@ -1882,6 +2215,10 @@
         }
 
         opp.pendingFakeWrongPlacement = true;
+        this.reportGameAction(RoomAPI.GAME_ACTIONS.APPLY_BLUFF_STATE, {
+          effect: 'deferred_true_hint',
+          targetPlayer: opponentIdx,
+        });
         this.toast(`${this.getPlayerName(opponentIdx)} will place a TRUE hint next turn.`, 'good');
         await this.sleep(900);
         this.renderPlay();
@@ -1903,6 +2240,11 @@
 
         shuffle(destroyed);
         const chosen = destroyed.slice(0, n);
+        this.reportGameAction(RoomAPI.GAME_ACTIONS.APPLY_BLUFF_STATE, {
+          effect: 'revive_destroyed_cells',
+          count: n,
+          targetPlayer: this.getOpponentPlayerIdx(),
+        });
 
         // Animate on attacker's target board cells and on defender's board cells
         for (const { r, c } of chosen) {
@@ -1932,6 +2274,11 @@
 
         forcedHint.blink = true;
         opp.hints.past.push(forcedHint);
+        this.reportGameAction(RoomAPI.GAME_ACTIONS.APPLY_BLUFF_STATE, {
+          effect: 'forced_correct_hint',
+          targetPlayer: this.getOpponentPlayerIdx(),
+          hintType: forcedHint.type,
+        });
 
         this.toast('Forced correct hint added!', 'bad');
         await this.sleep(900);
@@ -1947,6 +2294,11 @@
 
       // Wrong guess on a lie (TRUE or FAKE guess) -> defender bonus shots
       opp.bonusShotsNextTurn += 2;
+      this.reportGameAction(RoomAPI.GAME_ACTIONS.APPLY_BLUFF_STATE, {
+        effect: 'bonus_shots_next_turn',
+        targetPlayer: this.getOpponentPlayerIdx(),
+        amount: 2,
+      });
       this.toast('+2 SHOTS', 'good', true);
       await this.sleep(900);
       this.renderPlay();
@@ -2043,6 +2395,10 @@
       const { r, c } = sel;
       if (cur.targetShots[r][c] !== 'unknown') return;
       if (s.turn.shotsRemaining <= 0) return;
+      this.reportGameAction(RoomAPI.GAME_ACTIONS.ATTACK_CELL, {
+        attacker: this.getCurrentPlayerIdx(),
+        target: { r, c },
+      });
 
       // Track that at least one shot was taken this turn
       s.turn.hasFiredThisTurn = true;
@@ -2065,6 +2421,13 @@
         opp.defenseShots[r][c] = 'miss';
         this.toast('MISS', 'bad');
       }
+      this.reportGameAction(RoomAPI.GAME_ACTIONS.RESOLVE_ATTACK, {
+        attacker: this.getCurrentPlayerIdx(),
+        defender: this.getOpponentPlayerIdx(),
+        target: { r, c },
+        result: hasShip ? 'hit' : 'miss',
+        shotsRemainingBeforeConsume: s.turn.shotsRemaining,
+      });
 
       // consume one shot
       s.turn.shotsRemaining -= 1;
@@ -2078,6 +2441,7 @@
       const allSunk = Object.values(oppStatus).every(st => st.sunk);
       if (allSunk) {
         this.stopTurnTimer();
+        this.reportSyncSnapshot('game_over');
         this.showGameOver(`${this.getPlayerName(this.getCurrentPlayerIdx())} wins!`, 'All enemy ships are sunk.');
         return;
       }
@@ -2099,6 +2463,10 @@
     endTurn() {
       const s = this.state;
       if (!s) return;
+      this.reportGameAction(RoomAPI.GAME_ACTIONS.END_TURN, {
+        previousPlayer: s.currentPlayer,
+        nextPlayer: s.currentPlayer === 0 ? 1 : 0,
+      });
 
       // Switch player
       s.currentPlayer = (s.currentPlayer === 0) ? 1 : 0;

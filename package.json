@@ -1,0 +1,9 @@
+{
+  "name": "battleship-bluff",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Battleship Bluff local-first build with room-ready multiplayer scaffolding.",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
