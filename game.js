@@ -547,7 +547,6 @@
         return;
       }
 
-      const localIndex = this.session.isHost ? 0 : 1;
       const players = (this.roomState && Array.isArray(this.roomState.players)) ? this.roomState.players : [];
       const sorted = players.slice().sort((a, b) => {
         if (a.isHost === b.isHost) return 0;
@@ -563,32 +562,18 @@
       ];
 
       inputs.forEach((input, idx) => {
-        const isLocal = idx === localIndex;
-        input.readOnly = !isLocal;
-        input.classList.toggle('roomNameReadonly', !isLocal);
-        input.title = isLocal
-          ? 'Your room name. You can edit it.'
-          : 'This name is controlled by the other player.';
+        input.readOnly = true;
+        input.classList.add('roomNameReadonly');
+        input.title = 'Names are locked in room mode.';
         if (document.activeElement !== input) {
           input.value = names[idx] || '';
         }
       });
     },
 
-    commitRoomPlayerName(inputIndex) {
+    commitRoomPlayerName() {
       if (!this.session || !this.session.isRoomPlay) return;
-      const localIndex = this.session.isHost ? 0 : 1;
-      if (inputIndex !== localIndex) return;
-
-      const input = inputIndex === 0 ? this.els.p1NameInput : this.els.p2NameInput;
-      const nextName = SessionAPI.sanitizePlayerName(input.value, this.session.playerName || `Player ${inputIndex + 1}`);
-      input.value = nextName;
-      if (nextName === this.session.playerName) return;
-
-      this.session.playerName = nextName;
-      if (this.roomClient) this.roomClient.updatePlayerName(nextName);
-      this.renderRoomNameInputs();
-      this.renderRoomPanel();
+      return;
     },
 
     renderSessionNotice(forceVisible = false) {
