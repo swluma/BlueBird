@@ -276,7 +276,6 @@
         roomPanelTitle: $('#roomPanelTitle'),
         roomPanelLead: $('#roomPanelLead'),
         roomPanelMode: $('#roomPanelMode'),
-        roomPanelTransport: $('#roomPanelTransport'),
         roomPlayerName: $('#roomPlayerName'),
         roomCodeText: $('#roomCodeText'),
         roomConnectionText: $('#roomConnectionText'),
@@ -579,7 +578,6 @@
         ? 'Waiting for another player to join this local-dev room.'
         : 'Joining the room and waiting for the host to start.';
       this.els.roomPanelMode.textContent = this.session.isHost ? 'Host' : 'Join';
-      this.els.roomPanelTransport.textContent = `Transport: ${state.transportKind || 'local-dev'}`;
       this.els.roomDevNotice.textContent = this.session.wsUrl
         ? 'A ws URL was provided, but this phase intentionally uses the built-in local-dev transport so same-PC testing works with npm start.'
         : 'Local-dev transport is active. Room lifecycle is testable now; full authoritative gameplay sync remains a follow-up.';
