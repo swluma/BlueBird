@@ -10,6 +10,7 @@
       this.transport = TRANSPORT.createTransport(session);
       this.state = ROOM.createInitialRoomState(session);
       this.subscribers = new Set();
+      this.gameActionSubscribers = new Set();
       this.started = false;
       this.heartbeatId = null;
       this.bound = {
@@ -31,6 +32,11 @@
       this.subscribers.add(handler);
       handler(ROOM.cloneRoomState(this.state));
       return () => this.subscribers.delete(handler);
+    }
+
+    subscribeGameActions(handler) {
+      this.gameActionSubscribers.add(handler);
+      return () => this.gameActionSubscribers.delete(handler);
     }
 
     emitState() {
@@ -129,6 +135,7 @@
 
     handleGameAction(payload) {
       this.setState({ lastAction: payload || null });
+      this.gameActionSubscribers.forEach((handler) => handler(payload || null));
     }
 
     handleSyncState(payload) {

@@ -489,6 +489,7 @@
       this.roomState = RoomAPI.createInitialRoomState(this.session);
       this.roomClient = null;
       this.roomLaunchConsumed = false;
+      this.lastAppliedRemoteActionAt = 0;
       if (this.session.playerName && !this.els.p1NameInput.value) {
         this.els.p1NameInput.value = this.session.playerName;
       }
@@ -606,6 +607,7 @@
           this.beginRoomBackedGame();
         }
       });
+      this.roomClient.subscribeGameActions((action) => this.consumeRoomGameAction(action));
 
       await this.roomClient.connect();
     },
@@ -623,7 +625,7 @@
         : 'Joining the room and waiting for the host to start.';
       this.els.roomDevNotice.textContent = this.session.wsUrl
         ? 'A ws URL was provided, but this phase intentionally uses the built-in local-dev transport so same-PC testing works with npm start.'
-        : 'Local-dev transport is active. Room lifecycle is testable now; full authoritative gameplay sync remains a follow-up.';
+        : 'Local-dev transport is active and gameplay sync now mirrors state across room clients.';
       this.els.roomPlayerName.textContent = (localPlayer && localPlayer.name) || this.session.playerName;
       this.els.roomCodeText.textContent = this.session.roomCode || '----';
       this.els.roomConnectionText.textContent = state.connectionStatus;
@@ -745,7 +747,52 @@
     reportGameAction(type, payload) {
       if (!this.state || !this.state.multiplayer || !this.state.multiplayer.enabled) return;
       if (!this.roomClient || !this.roomState || !this.roomState.gameStarted) return;
-      this.roomClient.sendGameAction(type, payload);
+      const enrichedPayload = Object.assign({}, payload || {}, {
+        syncState: this.buildSyncStateSnapshot(),
+      });
+      this.roomClient.sendGameAction(type, enrichedPayload);
+    },
+
+    buildSyncStateSnapshot() {
+      if (!this.state) return null;
+      const snapshot = JSON.parse(JSON.stringify(this.state));
+      if (snapshot.turn) {
+        snapshot.turn.timerId = null;
+      }
+      return snapshot;
+    },
+
+    consumeRoomGameAction(action) {
+      if (!action || !action.payload || !action.payload.syncState) return;
+      if (!this.roomState || !this.roomState.localPlayerId) return;
+      if (action.playerId === this.roomState.localPlayerId) return;
+
+      const actionAt = Number(action.at || 0);
+      if (actionAt && this.lastAppliedRemoteActionAt && actionAt <= this.lastAppliedRemoteActionAt) return;
+      if (actionAt) this.lastAppliedRemoteActionAt = actionAt;
+
+      this.applyRemoteSyncState(action.payload.syncState);
+    },
+
+    applyRemoteSyncState(snapshot) {
+      if (!snapshot || typeof snapshot !== 'object') return;
+      this.stopTurnTimer();
+      this.state = snapshot;
+      if (!this.state.turn) return;
+      this.state.turn.timerId = null;
+
+      if (this.state.phase === TurnPhase.SETUP) {
+        this.showPanel('#setupPanel');
+        this.setPhasePill('Setup');
+        this.renderSetup();
+        return;
+      }
+      if (this.state.phase === TurnPhase.PLAY) {
+        this.showPanel('#playPanel');
+        this.setPhasePill('Play');
+        this.renderPlay();
+        this.startTurnTimer();
+      }
     },
 
     reportSyncSnapshot(reason) {
@@ -895,6 +942,7 @@
           text: '',
         }
       };
+      this.lastAppliedRemoteActionAt = 0;
 
       if (roomSession) {
         this.setPhasePill('Room Setup');
