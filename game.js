@@ -275,7 +275,6 @@
 
         roomPanelTitle: $('#roomPanelTitle'),
         roomPanelLead: $('#roomPanelLead'),
-        roomPanelMode: $('#roomPanelMode'),
         roomPlayerName: $('#roomPlayerName'),
         roomCodeText: $('#roomCodeText'),
         roomConnectionText: $('#roomConnectionText'),
@@ -361,6 +360,10 @@
     bind() {
       this.els.startBtn.addEventListener('click', () => this.startGame());
       this.els.timerToggleBtn.addEventListener('click', () => this.setTimerEnabled(!this.startTimerEnabled));
+      this.els.p1NameInput.addEventListener('change', () => this.commitRoomPlayerName(0));
+      this.els.p2NameInput.addEventListener('change', () => this.commitRoomPlayerName(1));
+      this.els.p1NameInput.addEventListener('blur', () => this.commitRoomPlayerName(0));
+      this.els.p2NameInput.addEventListener('blur', () => this.commitRoomPlayerName(1));
       this.els.roomInfoBtn.addEventListener('click', () => this.openRoomModal());
       this.els.closeRoomInfoBtn.addEventListener('click', () => this.closeRoomModal());
       this.els.roomReadyBtn.addEventListener('click', () => this.toggleRoomReady());
@@ -494,6 +497,7 @@
       this.setPhasePill('Ready');
       this.updateSessionPills();
       this.renderRoomLaunchControls();
+      this.renderRoomNameInputs();
       this.renderSessionNotice();
 
       if (this.session.isRoomPlay && this.session.isValid) {
@@ -530,6 +534,61 @@
       this.els.roomInfoBtn.classList.toggle('hidden', !validRoom);
       this.els.startBtn.classList.toggle('hidden', validRoom);
       this.els.startBtn.disabled = validRoom;
+    },
+
+    renderRoomNameInputs() {
+      const inputs = [this.els.p1NameInput, this.els.p2NameInput];
+      if (!this.session || !this.session.isRoomPlay) {
+        inputs.forEach((input) => {
+          input.readOnly = false;
+          input.classList.remove('roomNameReadonly');
+          input.removeAttribute('title');
+        });
+        return;
+      }
+
+      const localIndex = this.session.isHost ? 0 : 1;
+      const players = (this.roomState && Array.isArray(this.roomState.players)) ? this.roomState.players : [];
+      const sorted = players.slice().sort((a, b) => {
+        if (a.isHost === b.isHost) return 0;
+        return a.isHost ? -1 : 1;
+      });
+      const fallbackNames = [
+        this.session.isHost ? this.session.playerName : '',
+        this.session.isGuest ? this.session.playerName : '',
+      ];
+      const names = [
+        (sorted[0] && sorted[0].name) || fallbackNames[0],
+        (sorted[1] && sorted[1].name) || fallbackNames[1],
+      ];
+
+      inputs.forEach((input, idx) => {
+        const isLocal = idx === localIndex;
+        input.readOnly = !isLocal;
+        input.classList.toggle('roomNameReadonly', !isLocal);
+        input.title = isLocal
+          ? 'Your room name. You can edit it.'
+          : 'This name is controlled by the other player.';
+        if (document.activeElement !== input) {
+          input.value = names[idx] || '';
+        }
+      });
+    },
+
+    commitRoomPlayerName(inputIndex) {
+      if (!this.session || !this.session.isRoomPlay) return;
+      const localIndex = this.session.isHost ? 0 : 1;
+      if (inputIndex !== localIndex) return;
+
+      const input = inputIndex === 0 ? this.els.p1NameInput : this.els.p2NameInput;
+      const nextName = SessionAPI.sanitizePlayerName(input.value, this.session.playerName || `Player ${inputIndex + 1}`);
+      input.value = nextName;
+      if (nextName === this.session.playerName) return;
+
+      this.session.playerName = nextName;
+      if (this.roomClient) this.roomClient.updatePlayerName(nextName);
+      this.renderRoomNameInputs();
+      this.renderRoomPanel();
     },
 
     renderSessionNotice(forceVisible = false) {
@@ -577,11 +636,10 @@
       this.els.roomPanelLead.textContent = this.session.isHost
         ? 'Waiting for another player to join this local-dev room.'
         : 'Joining the room and waiting for the host to start.';
-      this.els.roomPanelMode.textContent = this.session.isHost ? 'Host' : 'Join';
       this.els.roomDevNotice.textContent = this.session.wsUrl
         ? 'A ws URL was provided, but this phase intentionally uses the built-in local-dev transport so same-PC testing works with npm start.'
         : 'Local-dev transport is active. Room lifecycle is testable now; full authoritative gameplay sync remains a follow-up.';
-      this.els.roomPlayerName.textContent = this.session.playerName;
+      this.els.roomPlayerName.textContent = (localPlayer && localPlayer.name) || this.session.playerName;
       this.els.roomCodeText.textContent = this.session.roomCode || '----';
       this.els.roomConnectionText.textContent = state.connectionStatus;
       this.els.roomPhaseText.textContent = state.roomPhase;
@@ -631,6 +689,7 @@
       this.els.roomReadyBtn.textContent = localReady ? 'Set Not Ready' : 'Ready Up';
       this.els.roomReadyBtn.disabled = !!state.roomClosed || state.gameStarted || state.connectionStatus === RoomAPI.CONNECTION_STATUS.ERROR;
       this.els.roomStartBtn.disabled = !this.session.isHost || !everyoneReady || !!state.gameStarted || !!state.roomClosed;
+      this.renderRoomNameInputs();
     },
 
     makeRoomWaitingText(state, players, everyoneReady) {
@@ -670,6 +729,7 @@
       this.roomState = RoomAPI.createInitialRoomState(this.session);
       this.updateSessionPills();
       this.renderRoomLaunchControls();
+      this.renderRoomNameInputs();
       this.renderSessionNotice(true);
       this.setPhasePill('Ready');
       this.closeRoomModal();

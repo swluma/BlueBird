@@ -747,6 +747,9 @@ a{color:inherit}
   flex-wrap:wrap;
   justify-content:flex-end;
 }
+.roomNameReadonly{
+  opacity:.72;
+}
 .roomCloseBtn{
   min-width:112px;
   padding:12px 18px;

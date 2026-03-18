@@ -167,6 +167,17 @@
       });
     }
 
+    updatePlayerName(playerName) {
+      this.session.playerName = playerName;
+      this.transport.send(ROOM.ROOM_EVENTS.JOIN_ROOM, {
+        gameId: this.session.gameId,
+        mode: this.session.mode,
+        maxPlayers: this.session.maxPlayers,
+        roomCode: this.session.roomCode,
+        playerName: this.session.playerName,
+      });
+    }
+
     startGame() {
       this.transport.send(ROOM.ROOM_EVENTS.START_GAME, {
         roomCode: this.state.roomCode,
