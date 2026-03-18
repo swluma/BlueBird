@@ -490,6 +490,7 @@
       this.roomClient = null;
       this.roomLaunchConsumed = false;
       this.lastAppliedRemoteActionAt = 0;
+      this.roomWaitingOverlayOpen = false;
       if (this.session.playerName && !this.els.p1NameInput.value) {
         this.els.p1NameInput.value = this.session.playerName;
       }
@@ -776,12 +777,19 @@
 
     applyRemoteSyncState(snapshot) {
       if (!snapshot || typeof snapshot !== 'object') return;
+      const localIdx = this.state && this.state.multiplayer
+        ? this.state.multiplayer.localPlayerIdx
+        : this.resolveLocalRoomPlayerIdx();
       this.stopTurnTimer();
       this.state = snapshot;
       if (!this.state.turn) return;
       this.state.turn.timerId = null;
+      if (this.state.multiplayer) {
+        this.state.multiplayer.localPlayerIdx = localIdx;
+      }
 
       if (this.state.phase === TurnPhase.SETUP) {
+        this.hideRoomWaitingOverlay();
         this.showPanel('#setupPanel');
         this.setPhasePill('Setup');
         this.renderSetup();
@@ -881,12 +889,14 @@
           enabled: true,
           mode: roomSession.mode,
           roomCode: roomSession.roomCode,
+          localPlayerIdx: this.resolveLocalRoomPlayerIdx(),
           transport: this.roomState ? this.roomState.transportKind : 'local-dev',
           localOnlyDevWarning: true,
         } : {
           enabled: false,
           mode: 'local',
           roomCode: null,
+          localPlayerIdx: null,
           transport: 'local-only',
           localOnlyDevWarning: false,
         },
@@ -943,10 +953,16 @@
         }
       };
       this.lastAppliedRemoteActionAt = 0;
+      this.hideRoomWaitingOverlay();
 
       if (roomSession) {
         this.setPhasePill('Room Setup');
+        this.showPanel('#setupPanel');
+        this.renderSetup();
+        this.syncRoomTurnOverlay();
+        return;
       }
+      this.hideRoomWaitingOverlay();
       this.openPassOverlay(this.getPlayerName(0), `Get ready to place your ships. Keep the screen hidden while passing.`);
       if (!roomSession) this.setPhasePill('Setup');
     },
@@ -955,9 +971,91 @@
       this.state.pass = { nextPhase, nextPlayer, text: body };
       this.els.passTitle.textContent = title;
       this.els.passBody.textContent = body;
+      this.els.readyBtn.classList.remove('hidden');
       this.els.passOverlay.classList.remove('hidden');
       document.getElementById('app')?.classList.add('pass-blur');
       this.pauseTimer(true);
+    },
+
+    resolveLocalRoomPlayerIdx() {
+      if (!this.session || !this.session.isRoomPlay || !this.roomState) return null;
+      const players = Array.isArray(this.roomState.players) ? this.roomState.players.slice() : [];
+      const sorted = players.sort((a, b) => {
+        if (a.isHost === b.isHost) return 0;
+        return a.isHost ? -1 : 1;
+      });
+      const idx = sorted.findIndex((player) => player.id === this.roomState.localPlayerId);
+      return idx >= 0 ? idx : null;
+    },
+
+    isRoomGameplaySyncEnabled() {
+      return !!(this.state && this.state.multiplayer && this.state.multiplayer.enabled);
+    },
+
+    isLocalPlayersTurn() {
+      if (!this.isRoomGameplaySyncEnabled()) return true;
+      let localIdx = this.state.multiplayer.localPlayerIdx;
+      if (localIdx == null) {
+        localIdx = this.resolveLocalRoomPlayerIdx();
+        this.state.multiplayer.localPlayerIdx = localIdx;
+      }
+      if (localIdx == null) return true;
+      return this.state.currentPlayer === localIdx;
+    },
+
+    isLocalSetupTurn() {
+      if (!this.isRoomGameplaySyncEnabled()) return true;
+      let localIdx = this.state.multiplayer.localPlayerIdx;
+      if (localIdx == null) {
+        localIdx = this.resolveLocalRoomPlayerIdx();
+        this.state.multiplayer.localPlayerIdx = localIdx;
+      }
+      if (localIdx == null) return true;
+      return this.state.setupPlayer === localIdx;
+    },
+
+    showRoomWaitingOverlay(title, body) {
+      if (!this.state) return;
+      this.els.passTitle.textContent = title;
+      this.els.passBody.textContent = body;
+      this.els.readyBtn.classList.add('hidden');
+      this.els.passOverlay.classList.remove('hidden');
+      document.getElementById('app')?.classList.add('pass-blur');
+      this.roomWaitingOverlayOpen = true;
+    },
+
+    hideRoomWaitingOverlay() {
+      if (!this.roomWaitingOverlayOpen) return;
+      this.els.readyBtn.classList.remove('hidden');
+      this.els.passOverlay.classList.add('hidden');
+      document.getElementById('app')?.classList.remove('pass-blur');
+      this.roomWaitingOverlayOpen = false;
+    },
+
+    syncRoomTurnOverlay() {
+      if (!this.isRoomGameplaySyncEnabled() || !this.state) {
+        this.hideRoomWaitingOverlay();
+        return;
+      }
+      if (this.state.phase === TurnPhase.SETUP) {
+        if (this.isLocalSetupTurn()) {
+          this.hideRoomWaitingOverlay();
+          return;
+        }
+        const activeName = this.getPlayerName(this.state.setupPlayer);
+        this.showRoomWaitingOverlay(`${activeName}'s Setup`, `Waiting for ${activeName} to place ships.`);
+        return;
+      }
+      if (this.state.phase === TurnPhase.PLAY) {
+        if (this.isLocalPlayersTurn()) {
+          this.hideRoomWaitingOverlay();
+          return;
+        }
+        const activeName = this.getPlayerName(this.state.currentPlayer);
+        this.showRoomWaitingOverlay(`${activeName}'s Turn`, `Waiting for ${activeName} to finish their turn.`);
+        return;
+      }
+      this.hideRoomWaitingOverlay();
     },
 
     onReady() {
@@ -975,7 +1073,10 @@
         this.showPanel('#playPanel');
         this.renderPlay();
         this.startTurnTimer();
-        this.handleDeferredTurnStartEffects();
+        if (this.isLocalPlayersTurn()) {
+          this.handleDeferredTurnStartEffects();
+        }
+        this.syncRoomTurnOverlay();
         return;
       }
     },
@@ -1040,6 +1141,7 @@
     renderSetup() {
       const pIdx = this.state.setupPlayer;
       const player = this.currentSetupPlayer();
+      const canEditSetup = this.isLocalSetupTurn();
       this.els.setupTitle.textContent = `${this.getPlayerName(pIdx)}: Place your fleet`;
       this.els.setupSubtitle.textContent = `Ships: 5, 4, 3, 3, 2. Tap a ship above, then tap the board to place it.`;
       this.renderShipPalette();
@@ -1059,8 +1161,13 @@
 
       // Update lock button
       const allPlaced = player.ships.length === SHIPS.length;
-      this.els.lockInBtn.disabled = !allPlaced;
-      this.els.setupReadyText.textContent = allPlaced ? 'All ships placed. You can lock in now.' : 'Place all ships to continue.';
+      this.els.lockInBtn.disabled = !canEditSetup || !allPlaced;
+      this.els.randomBtn.disabled = !canEditSetup;
+      this.els.resetBtn.disabled = !canEditSetup;
+      this.els.setupReadyText.textContent = canEditSetup
+        ? (allPlaced ? 'All ships placed. You can lock in now.' : 'Place all ships to continue.')
+        : `Waiting for ${this.getPlayerName(pIdx)} to finish setup.`;
+      this.syncRoomTurnOverlay();
     },
 
     renderShipPalette() {
@@ -1085,6 +1192,7 @@
         chip.appendChild(mini);
 
         chip.addEventListener('click', () => {
+          if (!this.isLocalSetupTurn()) return;
           if (used.has(ship.id)) return;
           ui.paletteSelected = (ui.paletteSelected === ship.id) ? null : ship.id;
           ui.editingShipId = null;
@@ -1096,6 +1204,7 @@
     },
 
     toggleEditShip(shipId) {
+      if (!this.isLocalSetupTurn()) return;
       const ui = this.state.ui.setup;
       ui.paletteSelected = null;
       ui.editingShipId = (ui.editingShipId === shipId) ? null : shipId;
@@ -1132,6 +1241,7 @@
     },
 
     onSetupCellClick(_ev, r, c) {
+      if (!this.isLocalSetupTurn()) return;
       const player = this.currentSetupPlayer();
       const ui = this.state.ui.setup;
 
@@ -1225,6 +1335,7 @@
     },
 
     rotateSelectedShipSetup() {
+      if (!this.isLocalSetupTurn()) return;
       const player = this.currentSetupPlayer();
       const shipId = this.state.ui.setup.editingShipId;
       if (!shipId) return;
@@ -1240,6 +1351,7 @@
     },
 
     randomPlace() {
+      if (!this.isLocalSetupTurn()) return;
       const player = this.currentSetupPlayer();
       const missing = SHIPS.filter(s => !player.ships.some(ps => ps.id === s.id));
       for (const def of missing) {
@@ -1264,6 +1376,7 @@
     },
 
     resetPlacement() {
+      if (!this.isLocalSetupTurn()) return;
       const player = this.currentSetupPlayer();
       player.ships = [];
       player.occupancy = makeGrid(null);
@@ -1273,6 +1386,7 @@
     },
 
     lockIn() {
+      if (!this.isLocalSetupTurn()) return;
       const pIdx = this.state.setupPlayer;
       const player = this.currentSetupPlayer();
       if (player.ships.length !== SHIPS.length) return;
@@ -1289,6 +1403,12 @@
       if (pIdx === 0) {
         // pass to player 2 setup
         this.state.setupPlayer = 1;
+        if (this.isRoomGameplaySyncEnabled()) {
+          this.showPanel('#setupPanel');
+          this.renderSetup();
+          this.reportSyncSnapshot('setup_player_switched');
+          return;
+        }
         this.openPassOverlay(this.getPlayerName(1), 'Get ready to place your ships. Keep the screen hidden while passing.');
         // still setup phase
         return;
@@ -1302,9 +1422,16 @@
       this.state.ui.play.hint.selection = null;
       this.state.ui.play.hint.setThisTurn = false;
 
+      this.setPhasePill('Play');
+      if (this.isRoomGameplaySyncEnabled()) {
+        this.showPanel('#playPanel');
+        this.startTurn();
+        this.syncRoomTurnOverlay();
+        this.reportSyncSnapshot('both_fleets_confirmed');
+        return;
+      }
       const p1Name = this.getPlayerName(0);
       this.openPassOverlay(p1Name, `Game starts! Hand the device to ${p1Name}. Keep the screen hidden while passing.`);
-      this.setPhasePill('Play');
       this.reportSyncSnapshot('both_fleets_confirmed');
     },
 
@@ -1535,6 +1662,7 @@
       if (this.isExhaustHintModalOpen()) {
         this.renderExhaustHintModal();
       }
+      this.syncRoomTurnOverlay();
     },
 
     makeLogLine() {
@@ -1760,6 +1888,7 @@
         c.appendChild(text);
 
         c.addEventListener('click', () => {
+          if (!this.isLocalPlayersTurn()) return;
           if (!this.state.ui.play.ownVisible) {
             this.toast('Show your board to place a hint.', 'bad');
             return;
@@ -1853,6 +1982,7 @@
 
     setHasToggle(has) {
       if (!this.state) return;
+      if (this.state.phase === TurnPhase.PLAY && !this.isLocalPlayersTurn()) return;
       if (this.state.ui.play.hint.selectedCardId === 'fake') return;
       this.state.ui.play.hint.claimHas = has;
       // Recompute truth and update colors
@@ -1861,6 +1991,7 @@
 
     setOwnVisible(visible, silent = false) {
       if (!this.state) return;
+      if (!silent && this.state.phase === TurnPhase.PLAY && !this.isLocalPlayersTurn()) return;
       this.state.ui.play.ownVisible = visible;
       this.els.ownHideOverlay.classList.toggle('hidden', visible);
       this.els.hideOwnBtn.classList.toggle('hidden', !visible);
@@ -1870,6 +2001,7 @@
     onOwnCellClick(_ev, r, c) {
       const s = this.state;
       if (!s || s.phase !== TurnPhase.PLAY) return;
+      if (!this.isLocalPlayersTurn()) return;
       if (this.isExhaustHintModalOpen()) return;
       if (!s.ui.play.ownVisible) return;
 
@@ -1889,6 +2021,7 @@
 
     async confirmHint() {
       const s = this.state;
+      if (!s || !this.isLocalPlayersTurn()) return;
       const curIdx = this.getCurrentPlayerIdx();
       const cur = this.getCurrentPlayer();
       const uiHint = s.ui.play.hint;
@@ -2147,6 +2280,7 @@
     onTargetCellClick(_ev, r, c) {
       const s = this.state;
       if (!s || s.phase !== TurnPhase.PLAY) return;
+      if (!this.isLocalPlayersTurn()) return;
       if (this.isExhaustHintModalOpen()) return;
 
       const cur = this.getCurrentPlayer();
@@ -2174,6 +2308,7 @@
     setGuess(isTrue) {
       const s = this.state;
       if (!s) return;
+      if (!this.isLocalPlayersTurn()) return;
       if (this.isExhaustHintModalOpen()) return;
       s.ui.play.incoming.guess = isTrue;
       this.renderPlay();
@@ -2182,6 +2317,7 @@
     async confirmShot() {
       const s = this.state;
       if (!s || s.phase !== TurnPhase.PLAY) return;
+      if (!this.isLocalPlayersTurn()) return;
       if (this.isExhaustHintModalOpen()) return;
 
       const opp = this.getOpponentPlayer();
@@ -2582,13 +2718,27 @@
     endTurn() {
       const s = this.state;
       if (!s) return;
-      this.reportGameAction(RoomAPI.GAME_ACTIONS.END_TURN, {
-        previousPlayer: s.currentPlayer,
-        nextPlayer: s.currentPlayer === 0 ? 1 : 0,
-      });
+      const previousPlayer = s.currentPlayer;
+      const nextPlayer = (s.currentPlayer === 0) ? 1 : 0;
+      s.currentPlayer = nextPlayer;
 
-      // Switch player
-      s.currentPlayer = (s.currentPlayer === 0) ? 1 : 0;
+      if (this.isRoomGameplaySyncEnabled()) {
+        this.showPanel('#playPanel');
+        this.setPhasePill('Play');
+        this.startTurn();
+        this.handleDeferredTurnStartEffects();
+        this.reportGameAction(RoomAPI.GAME_ACTIONS.END_TURN, {
+          previousPlayer,
+          nextPlayer,
+        });
+        this.renderPlay();
+        return;
+      }
+
+      this.reportGameAction(RoomAPI.GAME_ACTIONS.END_TURN, {
+        previousPlayer,
+        nextPlayer,
+      });
 
       // Show pass overlay
       const nextName = this.getPlayerName(s.currentPlayer);
@@ -2677,6 +2827,10 @@
     const readyBtn = document.getElementById('readyBtn');
     readyBtn.addEventListener('click', () => {
       if (App.state && App.state.phase === TurnPhase.PLAY) {
+        if (App.isRoomGameplaySyncEnabled() && !App.isLocalPlayersTurn()) {
+          App.syncRoomTurnOverlay();
+          return;
+        }
         // ensure turn started (might already have been started)
         // If timer hasn't started, start it.
         // Also reset incoming state each time.
