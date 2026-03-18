@@ -286,7 +286,6 @@
         roomReadyBtn: $('#roomReadyBtn'),
         roomStartBtn: $('#roomStartBtn'),
         roomRetryBtn: $('#roomRetryBtn'),
-        roomReloadBtn: $('#roomReloadBtn'),
         roomLocalBtn: $('#roomLocalBtn'),
         roomLastActionText: $('#roomLastActionText'),
 
@@ -364,7 +363,6 @@
       this.els.roomReadyBtn.addEventListener('click', () => this.toggleRoomReady());
       this.els.roomStartBtn.addEventListener('click', () => this.startRoomMatch());
       this.els.roomRetryBtn.addEventListener('click', () => this.retryRoomConnection());
-      this.els.roomReloadBtn.addEventListener('click', () => window.location.reload());
       this.els.roomLocalBtn.addEventListener('click', () => this.continueInLocalMode('Room mode cancelled by user.'));
       this.els.randomBtn.addEventListener('click', () => this.randomPlace());
       this.els.resetBtn.addEventListener('click', () => this.resetPlacement());
