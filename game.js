@@ -884,7 +884,7 @@
         },
         turn: {
           shotsRemaining: 1,
-          timer: turnSeconds,
+          timer: config.turnSeconds,
           timerId: null,
           paused: false,
           hasFiredThisTurn: false,
