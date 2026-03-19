@@ -1014,6 +1014,16 @@
       return this.state.currentPlayer === localIdx;
     },
 
+    getViewerPlayerIdx() {
+      if (!this.isRoomGameplaySyncEnabled()) return this.getCurrentPlayerIdx();
+      let localIdx = this.state.multiplayer.localPlayerIdx;
+      if (localIdx == null) {
+        localIdx = this.resolveLocalRoomPlayerIdx();
+        this.state.multiplayer.localPlayerIdx = localIdx;
+      }
+      return localIdx == null ? this.getCurrentPlayerIdx() : localIdx;
+    },
+
     isLocalSetupTurn() {
       if (!this.isRoomGameplaySyncEnabled()) return true;
       let localIdx = this.state.multiplayer.localPlayerIdx;
@@ -1058,12 +1068,9 @@
         return;
       }
       if (this.state.phase === TurnPhase.PLAY) {
-        if (this.isLocalPlayersTurn()) {
-          this.hideRoomWaitingOverlay();
-          return;
-        }
-        const activeName = this.getPlayerName(this.state.currentPlayer);
-        this.showRoomWaitingOverlay(`${activeName}'s Turn`, `Waiting for ${activeName} to finish their turn.`);
+        // In room play phase, both clients can watch the synced board live.
+        // Interaction is still guarded by turn checks in action handlers.
+        this.hideRoomWaitingOverlay();
         return;
       }
       this.hideRoomWaitingOverlay();
@@ -1612,12 +1619,15 @@
 
     renderPlay() {
       const s = this.state;
-      const curIdx = this.getCurrentPlayerIdx();
-      const cur = this.getCurrentPlayer();
-      const opp = this.getOpponentPlayer();
+      const actorIdx = this.getCurrentPlayerIdx();
+      const viewerIdx = this.getViewerPlayerIdx();
+      const cur = s.players[viewerIdx];
+      const opp = s.players[viewerIdx === 0 ? 1 : 0];
 
-      this.els.turnTitle.textContent = `${this.getPlayerName(curIdx)}'s Turn`;
-      this.els.turnSubtitle.textContent = `While you still have shots left, you may place 1 hint on your board (optional).`;
+      this.els.turnTitle.textContent = `${this.getPlayerName(actorIdx)}'s Turn`;
+      this.els.turnSubtitle.textContent = this.isLocalPlayersTurn()
+        ? 'While you still have shots left, you may place 1 hint on your board (optional).'
+        : 'Watching opponent turn. Your actions are disabled.';
 
       this.els.shotsText.textContent = String(s.turn.shotsRemaining);
       this.els.hintsLeftText.textContent = String(cur.cards.filter(c => !c.used).length);
@@ -1662,7 +1672,7 @@
       this.renderHintControls();
 
       // Enemy ships status
-      this.renderEnemyShips();
+      this.renderEnemyShips(cur, opp);
 
       // Guess bar
       this.renderGuessBar();
@@ -1677,6 +1687,9 @@
     },
 
     makeLogLine() {
+      if (this.isRoomGameplaySyncEnabled() && !this.isLocalPlayersTurn()) {
+        return 'Opponent is taking their turn. Live board updates are visible.';
+      }
       const s = this.state;
       const cur = this.getCurrentPlayer();
       const opp = this.getOpponentPlayer();
@@ -1696,9 +1709,7 @@
       return '...';
     },
 
-    renderEnemyShips() {
-      const cur = this.getCurrentPlayer();
-      const opp = this.getOpponentPlayer();
+    renderEnemyShips(cur = this.getCurrentPlayer(), opp = this.getOpponentPlayer()) {
 
       // Determine opponent ship status from their defenseShots
       const shipStatus = this.getFleetStatus(opp);
@@ -1760,6 +1771,10 @@
     },
 
     renderGuessBar() {
+      if (this.isRoomGameplaySyncEnabled() && !this.isLocalPlayersTurn()) {
+        this.els.guessBar.classList.add('hidden');
+        return;
+      }
       const s = this.state;
       const opp = this.getOpponentPlayer();
 
@@ -1876,7 +1891,7 @@
 
     renderCards() {
       const s = this.state;
-      const cur = this.getCurrentPlayer();
+      const cur = this.isRoomGameplaySyncEnabled() ? this.state.players[this.getViewerPlayerIdx()] : this.getCurrentPlayer();
       const uiHint = s.ui.play.hint;
       const hintsLeft = cur.cards.filter((card) => !card.used).length;
       const exhausted = hintsLeft === 0;
@@ -1938,7 +1953,7 @@
 
     renderHintControls() {
       const s = this.state;
-      const cur = this.getCurrentPlayer();
+      const cur = this.isRoomGameplaySyncEnabled() ? this.state.players[this.getViewerPlayerIdx()] : this.getCurrentPlayer();
       const uiHint = s.ui.play.hint;
       const isFake = uiHint.selectedCardId === 'fake';
 
@@ -2002,7 +2017,6 @@
 
     setOwnVisible(visible, silent = false) {
       if (!this.state) return;
-      if (!silent && this.state.phase === TurnPhase.PLAY && !this.isLocalPlayersTurn()) return;
       this.state.ui.play.ownVisible = visible;
       this.els.ownHideOverlay.classList.toggle('hidden', visible);
       this.els.hideOwnBtn.classList.toggle('hidden', !visible);
