@@ -455,6 +455,15 @@ a{color:inherit}
 }
 .hideOverlay .btn{padding:14px 18px; border-radius:18px}
 
+.targetLockOverlay{
+  position:absolute; inset:0;
+  z-index:8;
+  pointer-events:none;
+  background: rgba(255, 255, 255, 0.34);
+  backdrop-filter: blur(1.5px);
+  border-radius:18px;
+}
+
 /* Ships */
 .ship{
   position:absolute;

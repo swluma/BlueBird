@@ -308,6 +308,7 @@
         hintsLeftText: $('#hintsLeftText'),
         targetBoard: $('#targetBoard'),
         targetHintLayer: $('#targetHintLayer'),
+        targetLockOverlay: $('#targetLockOverlay'),
         enemyShips: $('#enemyShips'),
 
         ownBoard: $('#ownBoard'),
@@ -1670,6 +1671,7 @@
       this.els.turnSubtitle.textContent = this.isLocalPlayersTurn()
         ? 'While you still have shots left, you may place 1 hint on your board (optional).'
         : 'Watching opponent turn. Your actions are disabled.';
+      this.els.targetLockOverlay.classList.toggle('hidden', this.isLocalPlayersTurn());
 
       this.els.shotsText.textContent = String(s.turn.shotsRemaining);
       this.els.hintsLeftText.textContent = String(cur.cards.filter(c => !c.used).length);
