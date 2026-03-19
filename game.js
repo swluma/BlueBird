@@ -920,7 +920,7 @@
             editingShipId: null,   // shipId
           },
           play: {
-            ownVisible: false,
+            ownVisible: !!roomSession,
             hint: {
               selectedCardId: null,
               claimHas: true,
@@ -1435,7 +1435,7 @@
       // Both players placed -> start play with player 1
       this.state.phase = TurnPhase.PLAY;
       this.state.currentPlayer = 0;
-      this.state.ui.play.ownVisible = false;
+      this.state.ui.play.ownVisible = this.isRoomGameplaySyncEnabled();
       this.state.ui.play.hint.selectedCardId = null;
       this.state.ui.play.hint.selection = null;
       this.state.ui.play.hint.setThisTurn = false;
@@ -1592,8 +1592,8 @@
       cur.bonusShotsNextTurn = 0;
 
       // UI reset
-      s.ui.play.ownVisible = false;
-      this.setOwnVisible(false, true);
+      s.ui.play.ownVisible = this.isRoomGameplaySyncEnabled();
+      this.setOwnVisible(s.ui.play.ownVisible, true);
 
       s.ui.play.hint.selectedCardId = null;
       s.ui.play.hint.selection = null;
@@ -1623,7 +1623,12 @@
       const viewerIdx = this.getViewerPlayerIdx();
       const cur = s.players[viewerIdx];
       const opp = s.players[viewerIdx === 0 ? 1 : 0];
+      const forceOwnVisible = this.isRoomGameplaySyncEnabled();
       const watchingOpponentTurn = this.isRoomGameplaySyncEnabled() && !this.isLocalPlayersTurn();
+      if (forceOwnVisible && !s.ui.play.ownVisible) s.ui.play.ownVisible = true;
+      const ownBoardVisible = forceOwnVisible || s.ui.play.ownVisible;
+      this.els.ownHideOverlay.classList.toggle('hidden', ownBoardVisible);
+      this.els.hideOwnBtn.classList.toggle('hidden', forceOwnVisible || !ownBoardVisible);
 
       this.els.turnTitle.textContent = `${this.getPlayerName(actorIdx)}'s Turn`;
       this.els.turnSubtitle.textContent = this.isLocalPlayersTurn()
@@ -1666,7 +1671,7 @@
         sunkShipIds: ownSunkShipIds,
         showDamageMarks: true
       });
-      this.els.ownShipLayer.style.opacity = (this.isRoomGameplaySyncEnabled() || s.ui.play.ownVisible) ? '1' : '0';
+      this.els.ownShipLayer.style.opacity = ownBoardVisible ? '1' : '0';
 
       // Render hints:
       this.renderHintsLayer(this.els.targetHintLayer, opp, { view: 'opponent' }); // hints about opponent (visible on your target board)
@@ -2024,9 +2029,11 @@
 
     setOwnVisible(visible, silent = false) {
       if (!this.state) return;
-      this.state.ui.play.ownVisible = visible;
-      this.els.ownHideOverlay.classList.toggle('hidden', visible);
-      this.els.hideOwnBtn.classList.toggle('hidden', !visible);
+      const forceVisible = this.isRoomGameplaySyncEnabled();
+      const effectiveVisible = forceVisible ? true : !!visible;
+      this.state.ui.play.ownVisible = effectiveVisible;
+      this.els.ownHideOverlay.classList.toggle('hidden', effectiveVisible);
+      this.els.hideOwnBtn.classList.toggle('hidden', forceVisible || !effectiveVisible);
       if (!silent) this.renderPlay();
     },
 
