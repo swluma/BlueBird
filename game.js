@@ -351,6 +351,11 @@
 
         toast: $('#toast'),
         turnPopup: $('#turnPopup'),
+        hintOutcomePopup: $('#hintOutcomePopup'),
+        hintOutcomeTitle: $('#hintOutcomeTitle'),
+        hintOutcomeTruth: $('#hintOutcomeTruth'),
+        hintOutcomeGuess: $('#hintOutcomeGuess'),
+        hintOutcomeEffect: $('#hintOutcomeEffect'),
 
         gameOverOverlay: $('#gameOverOverlay'),
         gameOverTitle: $('#gameOverTitle'),
@@ -803,6 +808,10 @@
       if (actionAt && actionAt > this.lastAppliedRemoteActionAt) this.lastAppliedRemoteActionAt = actionAt;
 
       this.applyRemoteSyncState(action.payload.syncState);
+
+      if (action.type === RoomAPI.GAME_ACTIONS.REVEAL_HINT_RESULT) {
+        this.showIncomingHintOutcome(action.payload || {});
+      }
     },
 
     applyRemoteSyncState(snapshot) {
@@ -2445,9 +2454,11 @@
       await this.applyHintEffects(incoming, attackerGuess);
       this.reportGameAction(RoomAPI.GAME_ACTIONS.REVEAL_HINT_RESULT, {
         hintId: incoming.id,
+        hintOwner: this.getOpponentPlayerIdx(),
         attackerGuess,
         truth: incoming.truth,
         type: incoming.type,
+        effectText,
       });
 
       // Mark judgement done and proceed with the actual shot
@@ -2879,6 +2890,60 @@
       if (this._lastTurnPopupKey === key) return;
       this._lastTurnPopupKey = key;
       this.showTurnPopup('YOUR TURN');
+    },
+
+    showHintOutcomePopup({ truthText, truthColor, guessText, guessColor, effectText }) {
+      const box = this.els.hintOutcomePopup;
+      if (!box) return;
+      clearTimeout(this._hintOutcomePopupT);
+
+      this.els.hintOutcomeTitle.textContent = 'Your Hint Was Judged';
+      this.els.hintOutcomeTruth.textContent = `Truth: ${truthText}`;
+      this.els.hintOutcomeTruth.style.color = truthColor;
+      this.els.hintOutcomeGuess.textContent = `Opponent guessed: ${guessText}`;
+      this.els.hintOutcomeGuess.style.color = guessColor;
+      this.els.hintOutcomeEffect.textContent = effectText || 'Effect: none.';
+
+      box.classList.remove('hidden', 'show');
+      void box.offsetWidth;
+      box.classList.add('show');
+      this._hintOutcomePopupT = setTimeout(() => {
+        box.classList.remove('show');
+        box.classList.add('hidden');
+      }, 2900);
+    },
+
+    showIncomingHintOutcome(payload) {
+      if (!this.state || !this.isRoomGameplaySyncEnabled()) return;
+      if (typeof payload.hintOwner !== 'number') return;
+
+      let localIdx = this.state.multiplayer.localPlayerIdx;
+      if (localIdx == null) {
+        localIdx = this.resolveLocalRoomPlayerIdx();
+        this.state.multiplayer.localPlayerIdx = localIdx;
+      }
+      if (localIdx == null || localIdx !== payload.hintOwner) return;
+
+      const truthText = payload.type === 'fake'
+        ? 'FAKE'
+        : (payload.truth === true ? 'TRUE' : 'LIE');
+      const truthColor = payload.type === 'fake'
+        ? 'var(--accent)'
+        : (payload.truth === true ? 'var(--good)' : 'var(--danger)');
+      const guessText = payload.attackerGuess === 'fake'
+        ? 'FAKE'
+        : (payload.attackerGuess ? 'TRUE' : 'LIE');
+      const guessColor = payload.attackerGuess === 'fake'
+        ? 'var(--accent)'
+        : (payload.attackerGuess ? 'var(--good)' : 'var(--danger)');
+
+      this.showHintOutcomePopup({
+        truthText,
+        truthColor,
+        guessText,
+        guessColor,
+        effectText: payload.effectText || 'Effect: none.',
+      });
     },
 
     sleep(ms) {

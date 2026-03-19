@@ -955,5 +955,52 @@ a{color:inherit}
   100%{opacity:0; transform:translate(-50%, -18px) scale(.95)}
 }
 
+.hintOutcomePopup{
+  position: fixed;
+  left: 50%;
+  top: 88px;
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 26px));
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 2px solid #bfe8ff;
+  background:
+    radial-gradient(120% 140% at 50% -30%, #bfe8ff66, transparent 58%),
+    linear-gradient(180deg, #153f89fa, #0b1b3ef8);
+  box-shadow: 0 24px 80px #00000080, 0 0 24px #8ad5ff66;
+  z-index: 240;
+  pointer-events: none;
+  color: #f2f8ff;
+}
+.hintOutcomePopup .title{
+  font-size: 20px;
+  font-weight: 1000;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.hintOutcomePopup .truth,
+.hintOutcomePopup .guess{
+  font-size: 16px;
+  font-weight: 900;
+  margin: 3px 0;
+}
+.hintOutcomePopup .effect{
+  margin-top: 8px;
+  font-size: 13px;
+  color: #d8e7ff;
+  line-height: 1.45;
+}
+.hintOutcomePopup.show{
+  animation: hintOutcomePop 2.8s cubic-bezier(.2,.8,.2,1) forwards;
+}
+@keyframes hintOutcomePop{
+  0%{opacity:0; transform:translate(-50%, -22px) scale(.9)}
+  13%{opacity:1; transform:translate(-50%, 0) scale(1.03)}
+  24%{opacity:1; transform:translate(-50%, 0) scale(1)}
+  82%{opacity:1; transform:translate(-50%, 0) scale(1)}
+  100%{opacity:0; transform:translate(-50%, -14px) scale(.98)}
+}
+
 /* Small helpers */
 hr.sep{border:none; border-top:1px solid var(--line); margin:12px 0}
