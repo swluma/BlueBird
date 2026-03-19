@@ -1623,6 +1623,7 @@
       const viewerIdx = this.getViewerPlayerIdx();
       const cur = s.players[viewerIdx];
       const opp = s.players[viewerIdx === 0 ? 1 : 0];
+      const watchingOpponentTurn = this.isRoomGameplaySyncEnabled() && !this.isLocalPlayersTurn();
 
       this.els.turnTitle.textContent = `${this.getPlayerName(actorIdx)}'s Turn`;
       this.els.turnSubtitle.textContent = this.isLocalPlayersTurn()
@@ -1640,12 +1641,18 @@
         const r = parseInt(b.dataset.r, 10);
         const c = parseInt(b.dataset.c, 10);
         const sel = s.ui.play.targetSel;
-        b.classList.toggle('sel', !!sel && sel.r === r && sel.c === c);
+        b.classList.toggle('sel', !watchingOpponentTurn && !!sel && sel.r === r && sel.c === c);
         b.classList.toggle('blocked', cur.targetShots[r][c] !== 'unknown');
       }
 
       // Own board: show defense hits/misses
       this.renderCellsFromDefense(this.els.ownBoard, cur);
+      for (const b of this.els.ownBoard.querySelectorAll('.cell')) {
+        const r = parseInt(b.dataset.r, 10);
+        const c = parseInt(b.dataset.c, 10);
+        const sel = s.ui.play.targetSel;
+        b.classList.toggle('sel', watchingOpponentTurn && !!sel && sel.r === r && sel.c === c);
+      }
 
       // Render ships on own board (only when visible)
       const ownFleet = this.getFleetStatus(cur);
@@ -1659,7 +1666,7 @@
         sunkShipIds: ownSunkShipIds,
         showDamageMarks: true
       });
-      this.els.ownShipLayer.style.opacity = s.ui.play.ownVisible ? '1' : '0';
+      this.els.ownShipLayer.style.opacity = (this.isRoomGameplaySyncEnabled() || s.ui.play.ownVisible) ? '1' : '0';
 
       // Render hints:
       this.renderHintsLayer(this.els.targetHintLayer, opp, { view: 'opponent' }); // hints about opponent (visible on your target board)
