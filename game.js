@@ -390,7 +390,7 @@
       this.els.readyBtn.addEventListener('click', () => this.onReady());
       this.els.forfeitBtn.addEventListener('click', () => this.confirmEndGame());
 
-      this.els.restartBtn.addEventListener('click', () => window.location.reload());
+      this.els.restartBtn.addEventListener('click', () => this.handleRestartRequest());
       this.els.effectsInfoBtn.addEventListener('click', () => this.openInfoOverlay('effectsInfoOverlay'));
       this.els.placeHintEffectsInfoBtn.addEventListener('click', () => this.openInfoOverlay('placeHintInfoOverlay'));
       this.els.flowInfoBtn.addEventListener('click', () => this.openInfoOverlay('flowInfoOverlay'));
@@ -796,8 +796,8 @@
       if (action.playerId === this.roomState.localPlayerId) return;
 
       const actionAt = Number(action.at || 0);
-      if (actionAt && this.lastAppliedRemoteActionAt && actionAt <= this.lastAppliedRemoteActionAt) return;
-      if (actionAt) this.lastAppliedRemoteActionAt = actionAt;
+      if (actionAt && this.lastAppliedRemoteActionAt && actionAt < this.lastAppliedRemoteActionAt) return;
+      if (actionAt && actionAt > this.lastAppliedRemoteActionAt) this.lastAppliedRemoteActionAt = actionAt;
 
       this.applyRemoteSyncState(action.payload.syncState);
     },
@@ -820,6 +820,7 @@
         this.showPanel('#setupPanel');
         this.setPhasePill('Setup');
         this.renderSetup();
+        this.syncGameOverOverlay();
         return;
       }
       if (this.state.phase === TurnPhase.PLAY) {
@@ -830,6 +831,7 @@
         if (this.isLocalPlayersTurn()) {
           this.handleDeferredTurnStartEffects();
         }
+        this.syncGameOverOverlay();
       }
     },
 
@@ -968,6 +970,11 @@
             },
             targetSel: null,
           },
+          gameOver: {
+            visible: false,
+            title: 'Game Over',
+            body: '-',
+          },
         },
         turn: {
           shotsRemaining: 1,
@@ -984,6 +991,7 @@
       };
       this.lastAppliedRemoteActionAt = 0;
       this.hideRoomWaitingOverlay();
+      this.syncGameOverOverlay();
 
       if (roomSession) {
         this.setPhasePill('Room Setup');
@@ -2754,8 +2762,8 @@
       const allSunk = Object.values(oppStatus).every(st => st.sunk);
       if (allSunk) {
         this.stopTurnTimer();
-        this.reportSyncSnapshot('game_over');
         this.showGameOver(`${this.getPlayerName(this.getCurrentPlayerIdx())} wins!`, 'All enemy ships are sunk.');
+        this.reportSyncSnapshot('game_over');
         return;
       }
 
@@ -2841,11 +2849,49 @@
       return new Promise(res => setTimeout(res, ms));
     },
 
+    handleRestartRequest() {
+      if (!this.state) {
+        window.location.reload();
+        return;
+      }
+
+      if (this.isRoomGameplaySyncEnabled()) {
+        const config = this.state.config ? { ...this.state.config } : undefined;
+        const playerNames = Array.isArray(this.state.playerNames) ? this.state.playerNames.slice(0, 2) : this.getRoomPlayerNames();
+        this.startGameWithOptions({
+          config,
+          playerNames,
+          roomSession: this.session,
+        });
+        this.reportSyncSnapshot('restart_match');
+        this.toast('Match restarted.', 'good');
+        return;
+      }
+
+      window.location.reload();
+    },
+
+    syncGameOverOverlay() {
+      const gameOver = this.state && this.state.ui ? this.state.ui.gameOver : null;
+      if (!gameOver || !gameOver.visible) {
+        this.els.gameOverOverlay.classList.add('hidden');
+        return;
+      }
+      this.els.gameOverTitle.textContent = gameOver.title || 'Game Over';
+      this.els.gameOverBody.textContent = gameOver.body || '-';
+      this.els.gameOverOverlay.classList.remove('hidden');
+    },
+
     // Game over
     showGameOver(title, body) {
-      this.els.gameOverTitle.textContent = title;
-      this.els.gameOverBody.textContent = body;
-      this.els.gameOverOverlay.classList.remove('hidden');
+      if (this.state && this.state.ui) {
+        this.state.ui.gameOver = {
+          visible: true,
+          title,
+          body,
+        };
+      }
+      this.syncGameOverOverlay();
     },
 
     confirmEndGame() {
@@ -2857,6 +2903,9 @@
     endGame(msg) {
       this.stopTurnTimer();
       this.showGameOver('Game Over', msg);
+      if (this.isRoomGameplaySyncEnabled()) {
+        this.reportSyncSnapshot('game_over_manual');
+      }
     },
   };
 
