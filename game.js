@@ -827,6 +827,9 @@
         this.setPhasePill('Play');
         this.renderPlay();
         this.startTurnTimer();
+        if (this.isLocalPlayersTurn()) {
+          this.handleDeferredTurnStartEffects();
+        }
       }
     },
 
@@ -2781,7 +2784,9 @@
         this.showPanel('#playPanel');
         this.setPhasePill('Play');
         this.startTurn();
-        this.handleDeferredTurnStartEffects();
+        if (this.isLocalPlayersTurn()) {
+          this.handleDeferredTurnStartEffects();
+        }
         this.reportGameAction(RoomAPI.GAME_ACTIONS.END_TURN, {
           previousPlayer,
           nextPlayer,
