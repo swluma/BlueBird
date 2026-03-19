@@ -771,6 +771,22 @@
       if (snapshot.turn) {
         snapshot.turn.timerId = null;
       }
+      // Do not sync local-only, in-progress hint UI state. It can leak temporary
+      // placements to the opponent and spoil bluff information.
+      if (snapshot.ui && snapshot.ui.play) {
+        if (snapshot.ui.play.hint) {
+          snapshot.ui.play.hint.selectedCardId = null;
+          snapshot.ui.play.hint.selection = null;
+          snapshot.ui.play.hint.computedTruth = null;
+        }
+        if (snapshot.ui.play.incoming) {
+          snapshot.ui.play.incoming.guess = null;
+        }
+        if (snapshot.ui.play.exhaustReward) {
+          snapshot.ui.play.exhaustReward.open = false;
+          snapshot.ui.play.exhaustReward.selection = null;
+        }
+      }
       return snapshot;
     },
 
@@ -1857,7 +1873,7 @@
       if (view === 'self') {
         const s = this.state;
         const uiHint = s.ui.play.hint;
-        if (uiHint.selectedCardId && uiHint.selection && uiHint.selectedCardId !== 'fake') {
+        if (this.isLocalPlayersTurn() && uiHint.selectedCardId && uiHint.selection && uiHint.selectedCardId !== 'fake') {
           const preview = {
             id: 'preview',
             owner: this.getCurrentPlayerIdx(),
