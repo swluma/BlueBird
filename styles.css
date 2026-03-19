@@ -912,5 +912,39 @@ a{color:inherit}
 .toast.good{color:var(--good)}
 .toast.bad{color:var(--danger)}
 
+.turnPopup{
+  position:fixed;
+  left:50%;
+  top:96px;
+  transform:translateX(-50%);
+  min-width:220px;
+  text-align:center;
+  padding:16px 24px;
+  border-radius:20px;
+  border:2px solid #8ad5ffcc;
+  background:
+    radial-gradient(140% 180% at 50% -40%, #8ad5ff55, transparent 55%),
+    linear-gradient(180deg, #1f56b8f4, #0b1b3df6);
+  color:#f6fbff;
+  box-shadow: 0 0 0 2px #a6e0ff33 inset, 0 20px 60px #00000080, 0 0 22px #63c8ff66;
+  z-index:215;
+  font-weight:900;
+  font-size:22px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  text-shadow: 0 2px 0 #0a1f47, 0 0 12px #8ad5ff66;
+  pointer-events:none;
+}
+.turnPopup.show{
+  animation: turnPopupInOut 1.7s cubic-bezier(.2,.8,.2,1) forwards;
+}
+@keyframes turnPopupInOut{
+  0%{opacity:0; transform:translate(-50%, -28px) scale(.82)}
+  15%{opacity:1; transform:translate(-50%, 0) scale(1.06)}
+  30%{opacity:1; transform:translate(-50%, 0) scale(1)}
+  78%{opacity:1; transform:translate(-50%, 0) scale(1)}
+  100%{opacity:0; transform:translate(-50%, -18px) scale(.95)}
+}
+
 /* Small helpers */
 hr.sep{border:none; border-top:1px solid var(--line); margin:12px 0}

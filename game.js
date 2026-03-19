@@ -349,6 +349,7 @@
         exhaustHintBody: $('#exhaustHintBody'),
 
         toast: $('#toast'),
+        turnPopup: $('#turnPopup'),
 
         gameOverOverlay: $('#gameOverOverlay'),
         gameOverTitle: $('#gameOverTitle'),
@@ -490,6 +491,7 @@
       this.roomClient = null;
       this.roomLaunchConsumed = false;
       this.lastAppliedRemoteActionAt = 0;
+      this._lastTurnPopupKey = null;
       this.roomWaitingOverlayOpen = false;
       if (this.session.playerName && !this.els.p1NameInput.value) {
         this.els.p1NameInput.value = this.session.playerName;
@@ -810,6 +812,7 @@
       this.stopTurnTimer();
       this.state = snapshot;
       if (!this.state.turn) return;
+      if (!Number.isFinite(this.state.turn.seq)) this.state.turn.seq = 0;
       this.state.turn.timerId = null;
       if (this.state.multiplayer) {
         this.state.multiplayer.localPlayerIdx = localIdx;
@@ -828,6 +831,7 @@
         this.setPhasePill('Play');
         this.renderPlay();
         this.startTurnTimer();
+        this.maybeShowTurnPopup();
         if (this.isLocalPlayersTurn()) {
           this.handleDeferredTurnStartEffects();
         }
@@ -978,6 +982,7 @@
         },
         turn: {
           shotsRemaining: 1,
+          seq: 0,
           timer: config.turnSeconds,
           timerId: null,
           paused: false,
@@ -990,6 +995,7 @@
         }
       };
       this.lastAppliedRemoteActionAt = 0;
+      this._lastTurnPopupKey = null;
       this.hideRoomWaitingOverlay();
       this.syncGameOverOverlay();
 
@@ -1118,6 +1124,7 @@
         this.showPanel('#playPanel');
         this.renderPlay();
         this.startTurnTimer();
+        this.maybeShowTurnPopup();
         if (this.isLocalPlayersTurn()) {
           this.handleDeferredTurnStartEffects();
         }
@@ -1612,6 +1619,7 @@
       const opp = this.getOpponentPlayer();
 
       s.turn.timer = s.config.turnSeconds;
+      s.turn.seq = (Number(s.turn.seq) || 0) + 1;
       s.turn.hasFiredThisTurn = false;
 
       // Shots: base 1 + bonus
@@ -1642,6 +1650,7 @@
 
       this.renderPlay();
       this.startTurnTimer();
+      this.maybeShowTurnPopup();
     },
 
     renderPlay() {
@@ -2843,6 +2852,31 @@
       if (big) t.classList.add('big');
       clearTimeout(this._toastT);
       this._toastT = setTimeout(() => t.classList.add('hidden'), big ? 1100 : 900);
+    },
+
+    showTurnPopup(text) {
+      const p = this.els.turnPopup;
+      if (!p) return;
+      clearTimeout(this._turnPopupT);
+      p.textContent = text;
+      p.classList.remove('hidden', 'show');
+      void p.offsetWidth;
+      p.classList.add('show');
+      this._turnPopupT = setTimeout(() => {
+        p.classList.remove('show');
+        p.classList.add('hidden');
+      }, 1750);
+    },
+
+    maybeShowTurnPopup() {
+      if (!this.state || this.state.phase !== TurnPhase.PLAY) return;
+      if (!this.isLocalPlayersTurn()) return;
+      const curIdx = this.getCurrentPlayerIdx();
+      const turnSeq = Number(this.state.turn && this.state.turn.seq) || 0;
+      const key = `${curIdx}:${turnSeq}`;
+      if (this._lastTurnPopupKey === key) return;
+      this._lastTurnPopupKey = key;
+      this.showTurnPopup('YOUR TURN');
     },
 
     sleep(ms) {
