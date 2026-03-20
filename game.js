@@ -2951,25 +2951,23 @@
     },
 
     handleRestartRequest() {
-      if (!this.state) {
-        window.location.reload();
-        return;
-      }
+      this.stopTurnTimer();
+      this.pauseTimer(false);
+      this.els.resultOverlay.classList.add('hidden');
+      this.els.passOverlay.classList.add('hidden');
+      document.getElementById('app')?.classList.remove('pass-blur');
 
-      if (this.isRoomGameplaySyncEnabled()) {
-        const config = this.state.config ? { ...this.state.config } : undefined;
-        const playerNames = Array.isArray(this.state.playerNames) ? this.state.playerNames.slice(0, 2) : this.getRoomPlayerNames();
-        this.startGameWithOptions({
-          config,
-          playerNames,
-          roomSession: this.session,
-        });
-        this.reportSyncSnapshot('restart_match');
-        this.toast('Match restarted.', 'good');
-        return;
+      if (this.state && this.state.ui && this.state.ui.gameOver) {
+        this.state.ui.gameOver.visible = false;
       }
+      this.syncGameOverOverlay();
 
-      window.location.reload();
+      this.state = null;
+      this.setPhasePill('Ready');
+      this.renderRoomLaunchControls();
+      this.renderRoomNameInputs();
+      this.renderSessionNotice();
+      this.showPanel('#startPanel');
     },
 
     syncGameOverOverlay() {
