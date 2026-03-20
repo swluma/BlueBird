@@ -107,6 +107,7 @@
         players,
         hostId: payload.hostId || null,
         roomPhase,
+        settings: ROOM.normalizeRoomSettings(payload.settings),
         gameStarted: !!payload.gameStarted,
         isFull: players.length >= this.session.maxPlayers,
         connectionStatus,
@@ -172,6 +173,13 @@
       this.transport.send(ROOM.ROOM_EVENTS.PLAYER_READY, {
         roomCode: this.state.roomCode,
         isReady,
+      });
+    }
+
+    updateSettings(settings) {
+      this.transport.send(ROOM.ROOM_EVENTS.UPDATE_SETTINGS, {
+        roomCode: this.state.roomCode,
+        settings: ROOM.normalizeRoomSettings(settings),
       });
     }
 

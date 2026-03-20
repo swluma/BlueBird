@@ -367,6 +367,8 @@
     bind() {
       this.els.startBtn.addEventListener('click', () => this.startGame());
       this.els.timerToggleBtn.addEventListener('click', () => this.setTimerEnabled(!this.startTimerEnabled));
+      this.els.turnTimerInput.addEventListener('change', () => this.handleStartSettingsChanged());
+      this.els.extraShotToggle.addEventListener('change', () => this.handleStartSettingsChanged());
       this.els.p1NameInput.addEventListener('change', () => this.commitRoomPlayerName(0));
       this.els.p2NameInput.addEventListener('change', () => this.commitRoomPlayerName(1));
       this.els.p1NameInput.addEventListener('blur', () => this.commitRoomPlayerName(0));
@@ -505,6 +507,7 @@
 
       this.els.timerPill.classList.add('hidden');
       this.setPhasePill('Ready');
+      this.applyStartConfigToControls(this.getRoomSettings());
       this.updateSessionPills();
       this.renderRoomLaunchControls();
       this.renderRoomNameInputs();
@@ -610,6 +613,7 @@
       let lastGameStartSignal = 0;
       this.roomClient.subscribe((nextState) => {
         this.roomState = nextState;
+        this.applyStartConfigToControls(this.getRoomSettings());
         this.updateSessionPills();
         this.renderRoomPanel();
         const nextGameStartSignal = Number(nextState.gameStartSignal || 0);
@@ -741,6 +745,7 @@
       this.closeRoomModal();
       const playerNames = this.getRoomPlayerNames();
       this.startGameWithOptions({
+        config: this.getRoomSettings(),
         playerNames,
         roomSession: this.session,
       });
@@ -872,9 +877,48 @@
     },
 
     // Game state
+    getStartConfigFromControls() {
+      return {
+        turnSeconds: clamp(parseInt(this.els.turnTimerInput.value || '60', 10), 15, 180),
+        timerEnabled: !!this.startTimerEnabled,
+        extraShotOnHit: !!this.els.extraShotToggle.checked,
+      };
+    },
+
+    getRoomSettings() {
+      const settings = this.roomState && this.roomState.settings
+        ? this.roomState.settings
+        : this.getStartConfigFromControls();
+      return {
+        turnSeconds: clamp(parseInt(settings.turnSeconds, 10), 15, 180),
+        timerEnabled: !!settings.timerEnabled,
+        extraShotOnHit: !!settings.extraShotOnHit,
+      };
+    },
+
+    applyStartConfigToControls(config) {
+      const nextConfig = config || this.getStartConfigFromControls();
+      this._applyingRoomSettings = true;
+      this.els.turnTimerInput.value = String(clamp(parseInt(nextConfig.turnSeconds, 10), 15, 180));
+      this.startTimerEnabled = !!nextConfig.timerEnabled;
+      this.els.extraShotToggle.checked = !!nextConfig.extraShotOnHit;
+      this.renderStartTimerOption();
+      this._applyingRoomSettings = false;
+    },
+
+    handleStartSettingsChanged() {
+      if (this._applyingRoomSettings) return;
+      if (this.startTimerEnabled) {
+        this.els.turnTimerInput.value = String(clamp(parseInt(this.els.turnTimerInput.value || '60', 10), 15, 180));
+      }
+      if (!this.session || !this.session.isRoomPlay || !this.roomClient) return;
+      this.roomClient.updateSettings(this.getStartConfigFromControls());
+    },
+
     setTimerEnabled(enabled) {
       this.startTimerEnabled = !!enabled;
       this.renderStartTimerOption();
+      this.handleStartSettingsChanged();
     },
 
     renderStartTimerOption() {
@@ -911,26 +955,19 @@
     },
 
     startGame() {
-      const turnSeconds = clamp(parseInt(this.els.turnTimerInput.value || '60', 10), 15, 180);
-      const timerEnabled = !!this.startTimerEnabled;
-      const extraShotOnHit = !!this.els.extraShotToggle.checked;
       const playerNames = [
         this.normalizePlayerName(this.els.p1NameInput.value, 'Player 1'),
         this.normalizePlayerName(this.els.p2NameInput.value, 'Player 2'),
       ];
 
       this.startGameWithOptions({
-        config: { turnSeconds, timerEnabled, extraShotOnHit },
+        config: this.getStartConfigFromControls(),
         playerNames,
       });
     },
 
     startGameWithOptions(options = {}) {
-      const config = options.config || {
-        turnSeconds: clamp(parseInt(this.els.turnTimerInput.value || '60', 10), 15, 180),
-        timerEnabled: !!this.startTimerEnabled,
-        extraShotOnHit: !!this.els.extraShotToggle.checked,
-      };
+      const config = options.config || this.getStartConfigFromControls();
       const playerNames = Array.isArray(options.playerNames) && options.playerNames.length >= 2
         ? options.playerNames.slice(0, 2)
         : [

@@ -24,6 +24,7 @@
   const ROOM_EVENTS = {
     JOIN_ROOM: 'join_room',
     LEAVE_ROOM: 'leave_room',
+    UPDATE_SETTINGS: 'update_settings',
     PLAYER_READY: 'player_ready',
     START_GAME: 'start_game',
     GAME_ACTION: 'game_action',
@@ -54,6 +55,27 @@
     SYNC_SNAPSHOT: 'sync_snapshot',
   };
 
+  const DEFAULT_ROOM_SETTINGS = {
+    turnSeconds: 60,
+    timerEnabled: false,
+    extraShotOnHit: true,
+  };
+
+  function clampNumber(value, min, max, fallback) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return fallback;
+    return Math.max(min, Math.min(max, Math.round(num)));
+  }
+
+  function normalizeRoomSettings(raw) {
+    const source = raw && typeof raw === 'object' ? raw : {};
+    return {
+      turnSeconds: clampNumber(source.turnSeconds, 15, 180, DEFAULT_ROOM_SETTINGS.turnSeconds),
+      timerEnabled: !!source.timerEnabled,
+      extraShotOnHit: source.extraShotOnHit !== false,
+    };
+  }
+
   function createInitialRoomState(session) {
     return {
       session,
@@ -65,6 +87,7 @@
       localPlayerId: null,
       joined: false,
       roomPhase: session.isRoomPlay ? ROOM_PHASES.CONNECTING : ROOM_PHASES.IDLE,
+      settings: normalizeRoomSettings(null),
       isReady: false,
       isFull: false,
       gameStarted: false,
@@ -85,6 +108,8 @@
     CONNECTION_STATUS,
     ROOM_EVENTS,
     GAME_ACTIONS,
+    DEFAULT_ROOM_SETTINGS,
+    normalizeRoomSettings,
     createInitialRoomState,
     cloneRoomState,
   };

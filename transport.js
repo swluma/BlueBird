@@ -73,6 +73,7 @@
 
       if (eventName === ROOM.ROOM_EVENTS.JOIN_ROOM) this.handleJoinRoom(payload);
       else if (eventName === ROOM.ROOM_EVENTS.LEAVE_ROOM) this.handleLeaveRoom(payload);
+      else if (eventName === ROOM.ROOM_EVENTS.UPDATE_SETTINGS) this.handleUpdateSettings(payload);
       else if (eventName === ROOM.ROOM_EVENTS.PLAYER_READY) this.handlePlayerReady(payload);
       else if (eventName === ROOM.ROOM_EVENTS.START_GAME) this.handleStartGame(payload);
       else if (eventName === ROOM.ROOM_EVENTS.GAME_ACTION) this.handleGameAction(payload);
@@ -151,6 +152,7 @@
         hostId: this.playerId,
         phase: ROOM.ROOM_PHASES.WAITING,
         gameStarted: false,
+        settings: ROOM.normalizeRoomSettings(null),
         createdAt: Date.now(),
         updatedAt: Date.now(),
         players: [],
@@ -191,6 +193,7 @@
         phase: room.phase,
         maxPlayers: room.maxPlayers,
         gameStarted: !!room.gameStarted,
+        settings: ROOM.normalizeRoomSettings(room.settings),
         players: room.players.map((player) => ({
           id: player.id,
           name: player.name,
@@ -222,6 +225,7 @@
         this.emit(ROOM.ROOM_EVENTS.ERROR, { message: 'Wrong game type for this room.' });
         return;
       }
+      room.settings = ROOM.normalizeRoomSettings(room.settings);
 
       this.reclaimHostSlot(room, payload);
 
@@ -257,6 +261,23 @@
         }, roomCode);
       }
       this.broadcast(ROOM.ROOM_EVENTS.ROOM_STATE, snapshot, roomCode);
+    }
+
+    handleUpdateSettings(payload) {
+      const room = this.loadRoom(this.roomCode);
+      if (!room) {
+        this.emit(ROOM.ROOM_EVENTS.ERROR, { message: 'Room is no longer available.' });
+        return;
+      }
+      const player = room.players.find((entry) => entry.id === this.playerId);
+      if (!player) {
+        this.emit(ROOM.ROOM_EVENTS.ERROR, { message: 'You are not in this room.' });
+        return;
+      }
+      room.settings = ROOM.normalizeRoomSettings(payload && payload.settings);
+      room.updatedAt = Date.now();
+      this.saveRoom(room);
+      this.broadcast(ROOM.ROOM_EVENTS.ROOM_STATE, this.makeRoomSnapshot(room), room.roomCode);
     }
 
     handleLeaveRoom(payload) {
