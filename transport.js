@@ -135,6 +135,14 @@
       });
     }
 
+    reclaimHostSlot(room, payload) {
+      if (!room || !payload || payload.mode !== 'host') return;
+      const nextPlayers = room.players.filter((player) => !player.isHost || player.id === this.playerId);
+      if (nextPlayers.length === room.players.length) return;
+      room.players = nextPlayers;
+      this.resetMatchState(room);
+    }
+
     createRoom(roomCode, payload) {
       return {
         gameId: payload.gameId,
@@ -214,6 +222,8 @@
         this.emit(ROOM.ROOM_EVENTS.ERROR, { message: 'Wrong game type for this room.' });
         return;
       }
+
+      this.reclaimHostSlot(room, payload);
 
       const existing = room.players.find((player) => player.id === this.playerId);
       if (!existing && room.players.length >= room.maxPlayers) {
