@@ -804,9 +804,16 @@
     },
 
     consumeRoomGameAction(action) {
-      if (!action || !action.payload || !action.payload.syncState) return;
+      if (!action) return;
       if (!this.roomState || !this.roomState.localPlayerId) return;
       if (action.playerId === this.roomState.localPlayerId) return;
+
+      if (action.type === RoomAPI.GAME_ACTIONS.RESTART_MATCH) {
+        this.handleRestartRequest({ fromRemote: true });
+        return;
+      }
+
+      if (!action.payload || !action.payload.syncState) return;
 
       const actionAt = Number(action.at || 0);
       if (actionAt && this.lastAppliedRemoteActionAt && actionAt < this.lastAppliedRemoteActionAt) return;
@@ -2955,7 +2962,14 @@
       return new Promise(res => setTimeout(res, ms));
     },
 
-    async handleRestartRequest() {
+    async handleRestartRequest(options = {}) {
+      const fromRemote = !!options.fromRemote;
+      if (!fromRemote && this.isRoomGameplaySyncEnabled()) {
+        this.reportGameAction(RoomAPI.GAME_ACTIONS.RESTART_MATCH, {
+          reason: 'restart_button',
+        });
+      }
+
       this.stopTurnTimer();
       this.pauseTimer(false);
       this.els.resultOverlay.classList.add('hidden');

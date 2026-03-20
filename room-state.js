@@ -50,6 +50,7 @@
     APPLY_BLUFF_STATE: 'apply_bluff_state',
     CONSUME_HINT: 'consume_hint',
     END_TURN: 'end_turn',
+    RESTART_MATCH: 'restart_match',
     SYNC_SNAPSHOT: 'sync_snapshot',
   };
 
