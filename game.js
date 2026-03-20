@@ -896,6 +896,28 @@
       };
     },
 
+    canEditStartSettings() {
+      if (!this.session || !this.session.isRoomPlay) return true;
+      return !!this.session.isHost;
+    },
+
+    renderStartSettingsAccess() {
+      const canEdit = this.canEditStartSettings();
+      const guestTitle = this.session && this.session.isRoomPlay && !canEdit
+        ? 'Only the host can change room settings.'
+        : '';
+
+      this.els.timerToggleBtn.disabled = !canEdit;
+      this.els.extraShotToggle.disabled = !canEdit;
+      this.els.turnTimerInput.disabled = !canEdit || !this.startTimerEnabled;
+
+      [this.els.timerToggleBtn, this.els.turnTimerInput, this.els.extraShotToggle].forEach((control) => {
+        if (!control) return;
+        if (guestTitle) control.title = guestTitle;
+        else control.removeAttribute('title');
+      });
+    },
+
     applyStartConfigToControls(config) {
       const nextConfig = config || this.getStartConfigFromControls();
       this._applyingRoomSettings = true;
@@ -908,6 +930,10 @@
 
     handleStartSettingsChanged() {
       if (this._applyingRoomSettings) return;
+      if (!this.canEditStartSettings()) {
+        this.applyStartConfigToControls(this.getRoomSettings());
+        return;
+      }
       if (this.startTimerEnabled) {
         this.els.turnTimerInput.value = String(clamp(parseInt(this.els.turnTimerInput.value || '60', 10), 15, 180));
       }
@@ -916,6 +942,7 @@
     },
 
     setTimerEnabled(enabled) {
+      if (!this.canEditStartSettings()) return;
       this.startTimerEnabled = !!enabled;
       this.renderStartTimerOption();
       this.handleStartSettingsChanged();
@@ -925,7 +952,7 @@
       const enabled = !!this.startTimerEnabled;
       this.els.timerToggleBtn.textContent = enabled ? 'Timer On' : 'Timer Off';
       this.els.timerToggleBtn.classList.toggle('toggleOn', enabled);
-      this.els.turnTimerInput.disabled = !enabled;
+      this.renderStartSettingsAccess();
     },
 
     normalizePlayerName(raw, fallback) {

@@ -274,6 +274,10 @@
         this.emit(ROOM.ROOM_EVENTS.ERROR, { message: 'You are not in this room.' });
         return;
       }
+      if (!player.isHost || player.id !== room.hostId) {
+        this.emit(ROOM.ROOM_EVENTS.ERROR, { message: 'Only the host can change room settings.' });
+        return;
+      }
       room.settings = ROOM.normalizeRoomSettings(payload && payload.settings);
       room.updatedAt = Date.now();
       this.saveRoom(room);
