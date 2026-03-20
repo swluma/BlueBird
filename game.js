@@ -607,14 +607,17 @@
       this.openRoomModal();
 
       this.roomClient = new RoomClientAPI.RoomClient(this.session);
+      let lastGameStartSignal = 0;
       this.roomClient.subscribe((nextState) => {
         this.roomState = nextState;
         this.updateSessionPills();
         this.renderRoomPanel();
-        if (nextState.gameStarted && !this.roomLaunchConsumed) {
+        const nextGameStartSignal = Number(nextState.gameStartSignal || 0);
+        if (nextGameStartSignal > lastGameStartSignal && !this.roomLaunchConsumed) {
           this.roomLaunchConsumed = true;
           this.beginRoomBackedGame();
         }
+        lastGameStartSignal = nextGameStartSignal;
       });
       this.roomClient.subscribeGameActions((action) => this.consumeRoomGameAction(action));
 
@@ -692,7 +695,9 @@
       if (state.roomClosed) return 'The room was closed. Continue locally or reload.';
       if (state.connectionStatus === RoomAPI.CONNECTION_STATUS.ERROR) return state.lastError || 'Room connection failed.';
       if (state.connectionStatus === RoomAPI.CONNECTION_STATUS.CONNECTING) return 'Connecting to local-dev room transport...';
-      if (state.gameStarted) return 'Match signalled. Launching the game flow...';
+      if (state.gameStarted) {
+        return 'This room already signalled a match. Reload stays in room setup; use Room Info or Retry to reconnect instead of jumping into ship placement.';
+      }
       if (players.length < this.session.maxPlayers) return 'Waiting for opponent...';
       if (!everyoneReady) return this.session.isHost ? 'Both players must ready up before the host can start.' : 'Waiting for both players to become ready.';
       return this.session.isHost ? 'Room is ready. Start the match when you want.' : 'Room is ready. Waiting for host to start.';
@@ -2950,7 +2955,7 @@
       return new Promise(res => setTimeout(res, ms));
     },
 
-    handleRestartRequest() {
+    async handleRestartRequest() {
       this.stopTurnTimer();
       this.pauseTimer(false);
       this.els.resultOverlay.classList.add('hidden');
@@ -2964,6 +2969,21 @@
 
       this.state = null;
       this.setPhasePill('Ready');
+
+      if (this.session && this.session.isRoomPlay && this.roomClient) {
+        await this.roomClient.disconnect();
+        this.roomClient = null;
+        this.roomState = RoomAPI.createInitialRoomState(this.session);
+        this.roomLaunchConsumed = false;
+        this.updateSessionPills();
+        this.renderRoomLaunchControls();
+        this.renderRoomNameInputs();
+        this.renderSessionNotice();
+        this.showPanel('#startPanel');
+        await this.startRoomBootstrap();
+        return;
+      }
+
       this.renderRoomLaunchControls();
       this.renderRoomNameInputs();
       this.renderSessionNotice();

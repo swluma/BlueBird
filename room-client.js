@@ -130,6 +130,7 @@
         roomPhase: ROOM.ROOM_PHASES.PLAYING,
         connectionStatus: ROOM.CONNECTION_STATUS.PLAYING,
         gameStarted: true,
+        gameStartSignal: (this.state.gameStartSignal || 0) + 1,
       });
     }
 

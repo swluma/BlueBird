@@ -67,6 +67,7 @@
       isReady: false,
       isFull: false,
       gameStarted: false,
+      gameStartSignal: 0,
       lastError: null,
       lastAction: null,
       warnings: [],

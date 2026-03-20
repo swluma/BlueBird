@@ -116,11 +116,23 @@
     }
 
     normalizeRoomPhase(room) {
+      if (!room || room.players.length < room.maxPlayers) {
+        return ROOM.ROOM_PHASES.WAITING;
+      }
       if (room.gameStarted) return ROOM.ROOM_PHASES.PLAYING;
       if (room.players.length >= room.maxPlayers && room.players.every((player) => player.isReady)) {
         return ROOM.ROOM_PHASES.READY;
       }
       return ROOM.ROOM_PHASES.WAITING;
+    }
+
+    resetMatchState(room) {
+      if (!room) return;
+      room.gameStarted = false;
+      room.lastAction = null;
+      room.players.forEach((player) => {
+        player.isReady = false;
+      });
     }
 
     createRoom(roomCode, payload) {
@@ -254,17 +266,16 @@
         if (room.players.length === 0) {
           this.deleteRoom(roomCode);
         } else {
-          room.phase = ROOM.ROOM_PHASES.ENDED;
-          room.updatedAt = Date.now();
-          this.saveRoom(room);
           this.broadcast(ROOM.ROOM_EVENTS.ROOM_CLOSED, {
             roomCode,
             message: 'The host closed the room.',
           }, roomCode);
+          this.deleteRoom(roomCode);
         }
       } else if (room.players.length === 0) {
         this.deleteRoom(roomCode);
       } else {
+        this.resetMatchState(room);
         room.phase = this.normalizeRoomPhase(room);
         this.saveRoom(room);
         this.broadcast(ROOM.ROOM_EVENTS.PLAYER_LEFT, {
