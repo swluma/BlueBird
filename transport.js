@@ -589,6 +589,16 @@
         };
       }
 
+      if (eventName === ROOM.ROOM_EVENTS.UPDATE_SETTINGS) {
+        return {
+          type: ROOM.ROOM_EVENTS.UPDATE_SETTINGS,
+          payload: {
+            roomCode,
+            settings: ROOM.normalizeRoomSettings(payload && payload.settings),
+          },
+        };
+      }
+
       if (eventName === ROOM.ROOM_EVENTS.START_GAME) {
         return {
           type: ROOM.ROOM_EVENTS.START_GAME,
