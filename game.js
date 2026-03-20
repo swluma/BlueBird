@@ -2895,6 +2895,7 @@
 
     maybeShowTurnPopup() {
       if (!this.state || this.state.phase !== TurnPhase.PLAY) return;
+      if (!this.isRoomGameplaySyncEnabled()) return;
       if (!this.isLocalPlayersTurn()) return;
       const curIdx = this.getCurrentPlayerIdx();
       const turnSeq = Number(this.state.turn && this.state.turn.seq) || 0;
