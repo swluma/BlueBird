@@ -633,7 +633,7 @@
       const state = this.roomState || RoomAPI.createInitialRoomState(this.session);
       const players = Array.isArray(state.players) ? state.players : [];
       const localPlayer = players.find((player) => player.id === state.localPlayerId) || null;
-      const everyoneReady = players.length === this.session.maxPlayers && players.every((player) => player.isReady);
+      const everyoneReady = players.length === this.session.maxPlayers && players.every((player) => player.isHost || player.isReady);
 
       this.els.roomPanelTitle.textContent = this.session.isHost ? 'Host Room' : 'Join Room';
       this.els.roomPanelLead.textContent = this.session.isHost
@@ -667,8 +667,8 @@
           );
           const status = el(
             'div',
-            `roomPlayerState ${player.isReady ? 'ready' : 'waiting'}`,
-            player.isReady ? 'READY' : 'WAITING'
+            `roomPlayerState ${(player.isHost || player.isReady) ? 'ready' : 'waiting'}`,
+            (player.isHost || player.isReady) ? 'READY' : 'WAITING'
           );
           meta.appendChild(name);
           meta.appendChild(sub);
@@ -688,9 +688,10 @@
         this.els.roomErrorNotice.textContent = '';
       }
 
-      const localReady = !!(localPlayer && localPlayer.isReady);
+      const localReady = !!(localPlayer && (localPlayer.isHost || localPlayer.isReady));
+      this.els.roomReadyBtn.classList.toggle('hidden', !!this.session.isHost);
       this.els.roomReadyBtn.textContent = localReady ? 'Set Not Ready' : 'Ready Up';
-      this.els.roomReadyBtn.disabled = !!state.roomClosed || state.gameStarted || state.connectionStatus === RoomAPI.CONNECTION_STATUS.ERROR;
+      this.els.roomReadyBtn.disabled = !!this.session.isHost || !!state.roomClosed || state.gameStarted || state.connectionStatus === RoomAPI.CONNECTION_STATUS.ERROR;
       this.els.roomStartBtn.disabled = !this.session.isHost || !everyoneReady || !!state.gameStarted || !!state.roomClosed;
       this.renderRoomNameInputs();
     },
@@ -703,12 +704,12 @@
         return 'This room already signalled a match. Reload stays in room setup; use Room Info or Retry to reconnect instead of jumping into ship placement.';
       }
       if (players.length < this.session.maxPlayers) return 'Waiting for opponent...';
-      if (!everyoneReady) return this.session.isHost ? 'Both players must ready up before the host can start.' : 'Waiting for both players to become ready.';
+      if (!everyoneReady) return this.session.isHost ? 'Waiting for the opponent to ready up before the match can start.' : 'Waiting for both players to become ready.';
       return this.session.isHost ? 'Room is ready. Start the match when you want.' : 'Room is ready. Waiting for host to start.';
     },
 
     toggleRoomReady() {
-      if (!this.roomClient || !this.roomState || this.roomState.roomClosed) return;
+      if (!this.roomClient || !this.roomState || this.roomState.roomClosed || this.session.isHost) return;
       this.roomClient.toggleReady(!this.roomState.isReady);
     },
 

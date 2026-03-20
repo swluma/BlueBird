@@ -121,7 +121,7 @@
         return ROOM.ROOM_PHASES.WAITING;
       }
       if (room.gameStarted) return ROOM.ROOM_PHASES.PLAYING;
-      if (room.players.length >= room.maxPlayers && room.players.every((player) => player.isReady)) {
+      if (room.players.length >= room.maxPlayers && room.players.every((player) => player.isHost || player.isReady)) {
         return ROOM.ROOM_PHASES.READY;
       }
       return ROOM.ROOM_PHASES.WAITING;
@@ -132,7 +132,7 @@
       room.gameStarted = false;
       room.lastAction = null;
       room.players.forEach((player) => {
-        player.isReady = false;
+        player.isReady = !!player.isHost;
       });
     }
 
@@ -176,7 +176,7 @@
         clientId: this.clientId,
         name: payload.playerName,
         isHost: payload.mode === 'host',
-        isReady: false,
+        isReady: payload.mode === 'host',
         joinedAt: now,
         lastSeenAt: now,
         status: 'connected',
@@ -334,7 +334,7 @@
         return;
       }
 
-      player.isReady = !!payload.isReady;
+      player.isReady = player.isHost ? true : !!payload.isReady;
       player.lastSeenAt = Date.now();
       room.phase = this.normalizeRoomPhase(room);
       room.updatedAt = Date.now();
@@ -362,7 +362,7 @@
         this.emit(ROOM.ROOM_EVENTS.ERROR, { message: 'Waiting for another player.' });
         return;
       }
-      if (!room.players.every((player) => player.isReady)) {
+      if (!room.players.every((player) => player.isHost || player.isReady)) {
         this.emit(ROOM.ROOM_EVENTS.ERROR, { message: 'Both players must be ready.' });
         return;
       }

@@ -115,7 +115,7 @@
         lastError: null,
       });
       const me = players.find((player) => player.id === this.state.localPlayerId);
-      this.state.isReady = !!(me && me.isReady);
+      this.state.isReady = !!(me && (me.isHost || me.isReady));
       this.emitState();
     }
 
