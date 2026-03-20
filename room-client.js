@@ -99,6 +99,7 @@
     handleRoomState(payload) {
       const players = Array.isArray(payload.players) ? payload.players.slice() : [];
       const roomPhase = payload.phase || ROOM.ROOM_PHASES.WAITING;
+      const hasSettings = !!(payload && Object.prototype.hasOwnProperty.call(payload, 'settings'));
       let connectionStatus = ROOM.CONNECTION_STATUS.WAITING;
       if (roomPhase === ROOM.ROOM_PHASES.READY) connectionStatus = ROOM.CONNECTION_STATUS.READY;
       if (roomPhase === ROOM.ROOM_PHASES.PLAYING) connectionStatus = ROOM.CONNECTION_STATUS.PLAYING;
@@ -107,7 +108,9 @@
         players,
         hostId: payload.hostId || null,
         roomPhase,
-        settings: ROOM.normalizeRoomSettings(payload.settings),
+        settings: hasSettings
+          ? ROOM.normalizeRoomSettings(payload.settings)
+          : ROOM.normalizeRoomSettings(this.state.settings),
         gameStarted: !!payload.gameStarted,
         isFull: players.length >= this.session.maxPlayers,
         connectionStatus,
