@@ -501,7 +501,7 @@
       this.lastAppliedRemoteActionAt = 0;
       this._lastTurnPopupKey = null;
       this.roomWaitingOverlayOpen = false;
-      if (this.session.playerName && !this.els.p1NameInput.value) {
+      if (this.session.isRoomPlay && this.session.playerName && !this.els.p1NameInput.value) {
         this.els.p1NameInput.value = this.session.playerName;
       }
 
