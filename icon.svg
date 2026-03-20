@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Battleship Bluff icon</title>
+  <desc id="desc">A stylized battleship above ocean waves.</desc>
+  <defs>
+    <linearGradient id="sea" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#0f5d73" />
+      <stop offset="100%" stop-color="#093b56" />
+    </linearGradient>
+    <linearGradient id="ship" x1="0%" x2="100%" y1="0%" y2="0%">
+      <stop offset="0%" stop-color="#d8dee9" />
+      <stop offset="100%" stop-color="#8d99ae" />
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="24" fill="#071a2a" />
+  <circle cx="96" cy="32" r="10" fill="#f4d35e" />
+  <path d="M16 82c9-8 17-12 24-12 9 0 17 5 25 5 10 0 18-8 28-8 8 0 15 4 19 10v27H16Z" fill="url(#sea)" />
+  <path d="M30 72h48l9 14H41Z" fill="url(#ship)" />
+  <path d="M48 50h29l9 22H48Z" fill="#b8c4d7" />
+  <path d="M61 36h10v14H61Z" fill="#9fb0c7" />
+  <path d="M68 38l16 10H68Z" fill="#ef476f" />
+  <circle cx="42" cy="79" r="3" fill="#071a2a" />
+  <circle cx="54" cy="79" r="3" fill="#071a2a" />
+  <circle cx="66" cy="79" r="3" fill="#071a2a" />
+  <path d="M18 98c8-5 16-7 24-7 9 0 18 5 27 5 11 0 17-6 25-6 6 0 12 2 18 6" fill="none" stroke="#8be9fd" stroke-linecap="round" stroke-width="6" />
+  <path d="M20 109c8-5 16-7 24-7 9 0 18 5 27 5 11 0 17-6 25-6 6 0 12 2 18 6" fill="none" stroke="#4cc9f0" stroke-linecap="round" stroke-width="5" />
+</svg>

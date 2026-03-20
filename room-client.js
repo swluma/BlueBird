@@ -124,7 +124,7 @@
     }
 
     handleGameStarted(payload) {
-      if (payload && payload.room) {
+      if (payload && payload.room && Array.isArray(payload.room.players) && payload.room.players.length) {
         this.handleRoomState(payload.room);
       }
       this.setState({
@@ -141,7 +141,12 @@
     }
 
     handleSyncState(payload) {
-      if (payload && payload.room) this.handleRoomState(payload.room);
+      if (payload && payload.room) {
+        this.handleRoomState(payload.room);
+      }
+      if (payload && payload.lastAction) {
+        this.setState({ lastAction: payload.lastAction });
+      }
     }
 
     handleRoomClosed(payload) {

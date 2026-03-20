@@ -634,14 +634,15 @@
       const players = Array.isArray(state.players) ? state.players : [];
       const localPlayer = players.find((player) => player.id === state.localPlayerId) || null;
       const everyoneReady = players.length === this.session.maxPlayers && players.every((player) => player.isHost || player.isReady);
+      const transportLabel = this.getRoomTransportLabel(state.transportKind);
 
       this.els.roomPanelTitle.textContent = this.session.isHost ? 'Host Room' : 'Join Room';
       this.els.roomPanelLead.textContent = this.session.isHost
-        ? 'Waiting for another player to join this local-dev room.'
+        ? `Waiting for another player to join this ${transportLabel} room.`
         : 'Joining the room and waiting for the host to start.';
-      this.els.roomDevNotice.textContent = this.session.wsUrl
-        ? 'A ws URL was provided, but this phase intentionally uses the built-in local-dev transport so same-PC testing works with npm start.'
-        : 'Local-dev transport is active and gameplay sync now mirrors state across room clients.';
+      this.els.roomDevNotice.textContent = state.transportKind === 'websocket'
+        ? 'Render/WebSocket room sync is active. Keep this tab open while connected to the room.'
+        : 'Local-dev room sync is active for same-device or same-browser testing.';
       this.els.roomPlayerName.textContent = (localPlayer && localPlayer.name) || this.session.playerName;
       this.els.roomCodeText.textContent = this.session.roomCode || '----';
       this.els.roomConnectionText.textContent = state.connectionStatus;
@@ -696,10 +697,20 @@
       this.renderRoomNameInputs();
     },
 
+    getRoomTransportLabel(kind) {
+      if (kind === 'websocket') return 'Render/WebSocket';
+      if (kind === 'local-dev') return 'local-dev';
+      return 'room';
+    },
+
     makeRoomWaitingText(state, players, everyoneReady) {
       if (state.roomClosed) return 'The room was closed. Continue locally or reload.';
       if (state.connectionStatus === RoomAPI.CONNECTION_STATUS.ERROR) return state.lastError || 'Room connection failed.';
-      if (state.connectionStatus === RoomAPI.CONNECTION_STATUS.CONNECTING) return 'Connecting to local-dev room transport...';
+      if (state.connectionStatus === RoomAPI.CONNECTION_STATUS.CONNECTING) {
+        return state.transportKind === 'websocket'
+          ? 'Connecting to the Render room server...'
+          : 'Connecting to local-dev room transport...';
+      }
       if (state.gameStarted) {
         return 'This room already signalled a match. Reload stays in room setup; use Room Info or Retry to reconnect instead of jumping into ship placement.';
       }
@@ -1013,7 +1024,7 @@
           mode: roomSession.mode,
           roomCode: roomSession.roomCode,
           localPlayerIdx: this.resolveLocalRoomPlayerIdx(),
-          transport: this.roomState ? this.roomState.transportKind : 'local-dev',
+          transport: this.roomState ? this.roomState.transportKind : (roomSession.wsUrl ? 'websocket' : 'local-dev'),
           localOnlyDevWarning: true,
         } : {
           enabled: false,

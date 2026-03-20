@@ -2,7 +2,7 @@
   "id": "battleship-bluff",
   "title": "Battleship Bluff",
   "description": "A local-first Battleship variant with bluff hints and room-ready multiplayer scaffolding.",
-  "icon": "ship",
+  "icon": "./icon.svg",
   "maxPlayers": 2,
   "supportsLocal": true,
   "supportsRooms": true

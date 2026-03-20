@@ -77,11 +77,14 @@
   }
 
   function createInitialRoomState(session) {
+    const transportKind = session.isRoomPlay
+      ? (session.wsUrl ? 'websocket' : 'local-dev')
+      : 'local-only';
     return {
       session,
       roomCode: session.roomCode,
       connectionStatus: session.isRoomPlay ? CONNECTION_STATUS.CONNECTING : CONNECTION_STATUS.OFFLINE,
-      transportKind: session.isRoomPlay ? 'local-dev' : 'local-only',
+      transportKind,
       players: [],
       hostId: null,
       localPlayerId: null,

@@ -6,9 +6,40 @@
 
   const STORAGE_PREFIX = 'battleship-bluff.devroom.';
   const CHANNEL_NAME = 'battleship-bluff.devroom.channel';
+  const REMOTE_PLAYER_KEY_PREFIX = 'battleship-bluff.remote-player.';
 
   function createId(prefix) {
     return `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now().toString(36)}`;
+  }
+
+  function getRemoteStorageKey(session) {
+    const roomCode = SESSION.sanitizeRoomCode(session && session.roomCode);
+    const mode = session && session.mode ? String(session.mode) : 'room';
+    return `${REMOTE_PLAYER_KEY_PREFIX}${roomCode || 'noroom'}.${mode}`;
+  }
+
+  function getStoredRemoteIdentity(session) {
+    try {
+      const raw = window.sessionStorage.getItem(getRemoteStorageKey(session));
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return null;
+      if (!parsed.playerId || !parsed.clientId) return null;
+      return {
+        playerId: String(parsed.playerId),
+        clientId: String(parsed.clientId),
+      };
+    } catch (_error) {
+      return null;
+    }
+  }
+
+  function persistRemoteIdentity(session, identity) {
+    try {
+      window.sessionStorage.setItem(getRemoteStorageKey(session), JSON.stringify(identity));
+    } catch (_error) {
+      // Session storage is an optimization for reconnects only.
+    }
   }
 
   class BaseTransport {
@@ -419,26 +450,325 @@
     constructor(session) {
       super();
       this.session = session;
+      const identity = getStoredRemoteIdentity(session);
+      this.clientId = identity && identity.clientId ? identity.clientId : createId('ws_client');
+      this.playerId = identity && identity.playerId ? identity.playerId : createId('ws_player');
+      this.socket = null;
+      this.connected = false;
+      this.roomCode = session.roomCode;
+      this.reconnectIdentity();
     }
 
     connect() {
-      this.emit(ROOM.ROOM_EVENTS.ERROR, {
-        message: 'Remote WebSocket transport is not enabled in this local-test phase.',
+      if (!this.session.wsUrl) {
+        this.emit(ROOM.ROOM_EVENTS.ERROR, {
+          message: 'Room mode requires a WebSocket URL.',
+        });
+        return Promise.resolve();
+      }
+      if (this.connected && this.socket && this.socket.readyState === window.WebSocket.OPEN) {
+        return Promise.resolve();
+      }
+
+      this.emit('status', {
+        status: ROOM.CONNECTION_STATUS.CONNECTING,
+        transportKind: 'websocket',
       });
-      return Promise.resolve();
+
+      return new Promise((resolve) => {
+        const socket = new window.WebSocket(this.session.wsUrl);
+        this.socket = socket;
+        let settled = false;
+
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          resolve();
+        };
+
+        socket.addEventListener('open', () => {
+          this.connected = true;
+          this.emit('status', {
+            status: ROOM.CONNECTION_STATUS.CONNECTED,
+            transportKind: 'websocket',
+          });
+          finish();
+        });
+
+        socket.addEventListener('message', (event) => this.onMessage(event.data));
+
+        socket.addEventListener('close', () => {
+          this.connected = false;
+          this.emit('status', {
+            status: ROOM.CONNECTION_STATUS.DISCONNECTED,
+            transportKind: 'websocket',
+          });
+          if (!settled) finish();
+        });
+
+        socket.addEventListener('error', () => {
+          this.emit(ROOM.ROOM_EVENTS.ERROR, {
+            message: 'Could not connect to the room server.',
+          });
+          if (!settled) finish();
+        });
+      });
     }
 
     disconnect() {
+      if (!this.socket) return Promise.resolve();
+      if (this.connected) {
+        this.send(ROOM.ROOM_EVENTS.LEAVE_ROOM, { roomCode: this.roomCode });
+      }
+      try {
+        this.socket.close();
+      } catch (_error) {
+        // Ignore close errors from already-closing sockets.
+      }
+      this.socket = null;
+      this.connected = false;
       return Promise.resolve();
     }
 
-    send() {}
+    reconnectIdentity() {
+      persistRemoteIdentity(this.session, {
+        playerId: this.playerId,
+        clientId: this.clientId,
+      });
+    }
+
+    send(eventName, payload) {
+      if (!this.socket || this.socket.readyState !== window.WebSocket.OPEN) {
+        if (eventName !== ROOM.ROOM_EVENTS.LEAVE_ROOM) {
+          this.emit(ROOM.ROOM_EVENTS.ERROR, { message: 'Room connection is not open.' });
+        }
+        return;
+      }
+
+      const message = this.normalizeOutgoingMessage(eventName, payload);
+      if (!message) return;
+      this.socket.send(JSON.stringify(message));
+    }
+
+    normalizeOutgoingMessage(eventName, payload) {
+      const roomCode = SESSION.sanitizeRoomCode((payload && payload.roomCode) || this.roomCode);
+
+      if (eventName === ROOM.ROOM_EVENTS.JOIN_ROOM) {
+        this.roomCode = roomCode;
+        return {
+          type: ROOM.ROOM_EVENTS.JOIN_ROOM,
+          payload: {
+            gameId: payload.gameId,
+            mode: payload.mode,
+            roomCode,
+            player: {
+              id: this.playerId,
+              name: payload.playerName,
+            },
+          },
+        };
+      }
+
+      if (eventName === ROOM.ROOM_EVENTS.LEAVE_ROOM) {
+        return {
+          type: ROOM.ROOM_EVENTS.LEAVE_ROOM,
+          payload: {
+            roomCode,
+            playerId: this.playerId,
+          },
+        };
+      }
+
+      if (eventName === ROOM.ROOM_EVENTS.PLAYER_READY) {
+        return {
+          type: ROOM.ROOM_EVENTS.PLAYER_READY,
+          payload: {
+            roomCode,
+            ready: !!(payload && payload.isReady),
+          },
+        };
+      }
+
+      if (eventName === ROOM.ROOM_EVENTS.START_GAME) {
+        return {
+          type: ROOM.ROOM_EVENTS.START_GAME,
+          payload: {
+            roomCode,
+            seed: Date.now(),
+          },
+        };
+      }
+
+      if (eventName === ROOM.ROOM_EVENTS.GAME_ACTION) {
+        return {
+          type: ROOM.ROOM_EVENTS.GAME_ACTION,
+          payload: {
+            roomCode,
+            action: {
+              type: payload && payload.type,
+              payload: payload && payload.payload,
+            },
+          },
+        };
+      }
+
+      if (eventName === ROOM.ROOM_EVENTS.SYNC_REQUEST) {
+        return {
+          type: ROOM.ROOM_EVENTS.SYNC_REQUEST,
+          payload: {
+            roomCode,
+          },
+        };
+      }
+
+      if (eventName === ROOM.ROOM_EVENTS.HEARTBEAT) {
+        return {
+          type: ROOM.ROOM_EVENTS.HEARTBEAT,
+          payload: {
+            roomCode,
+          },
+        };
+      }
+
+      return null;
+    }
+
+    onMessage(raw) {
+      let message;
+      try {
+        message = JSON.parse(raw);
+      } catch (_error) {
+        this.emit(ROOM.ROOM_EVENTS.ERROR, { message: 'Received an invalid room message.' });
+        return;
+      }
+
+      const type = message && message.type ? String(message.type) : '';
+      const payload = message && typeof message.payload === 'object' ? message.payload : {};
+
+      if (type === ROOM.ROOM_EVENTS.ROOM_JOINED) {
+        this.roomCode = SESSION.sanitizeRoomCode(payload.roomCode || this.roomCode);
+        this.emit(ROOM.ROOM_EVENTS.ROOM_JOINED, {
+          roomCode: this.roomCode,
+          playerId: payload.playerId || this.playerId,
+          transportKind: 'websocket',
+          room: this.normalizeIncomingRoom(payload.room),
+        });
+        return;
+      }
+
+      if (type === ROOM.ROOM_EVENTS.ROOM_STATE) {
+        this.emit(ROOM.ROOM_EVENTS.ROOM_STATE, this.extractRoomStatePayload(payload));
+        return;
+      }
+
+      if (type === ROOM.ROOM_EVENTS.PLAYER_JOINED) {
+        this.emit(ROOM.ROOM_EVENTS.PLAYER_JOINED, {
+          roomCode: payload.roomCode || this.roomCode,
+          player: this.normalizeIncomingPlayer(payload.player),
+        });
+        return;
+      }
+
+      if (type === ROOM.ROOM_EVENTS.PLAYER_LEFT) {
+        this.emit(ROOM.ROOM_EVENTS.PLAYER_LEFT, payload);
+        return;
+      }
+
+      if (type === ROOM.ROOM_EVENTS.PLAYER_READY_STATE) {
+        this.emit(ROOM.ROOM_EVENTS.PLAYER_READY_STATE, {
+          roomCode: payload.roomCode || this.roomCode,
+          playerId: payload.playerId,
+          isReady: !!payload.ready,
+        });
+        return;
+      }
+
+      if (type === ROOM.ROOM_EVENTS.GAME_STARTED) {
+        this.emit(ROOM.ROOM_EVENTS.GAME_STARTED, {
+          roomCode: payload.roomCode || this.roomCode,
+          room: this.normalizeIncomingRoom({
+            roomCode: payload.roomCode || this.roomCode,
+            phase: ROOM.ROOM_PHASES.PLAYING,
+          }),
+        });
+        return;
+      }
+
+      if (type === ROOM.ROOM_EVENTS.GAME_ACTION) {
+        const action = payload && payload.action ? payload.action : {};
+        this.emit(ROOM.ROOM_EVENTS.GAME_ACTION, {
+          type: action.type || null,
+          payload: action.payload || null,
+          playerId: payload.fromPlayerId || null,
+          at: Date.now(),
+        });
+        return;
+      }
+
+      if (type === ROOM.ROOM_EVENTS.SYNC_STATE) {
+        this.emit(ROOM.ROOM_EVENTS.SYNC_STATE, {
+          roomCode: payload.roomCode || this.roomCode,
+          room: this.normalizeIncomingRoom(payload.room),
+          lastAction: payload.lastAction || null,
+        });
+        return;
+      }
+
+      if (type === ROOM.ROOM_EVENTS.ERROR) {
+        this.emit(ROOM.ROOM_EVENTS.ERROR, {
+          message: payload && payload.message ? payload.message : 'Room error.',
+          code: payload && payload.code ? payload.code : null,
+          recoverable: payload ? payload.recoverable !== false : true,
+        });
+        return;
+      }
+
+      if (type === ROOM.ROOM_EVENTS.ROOM_CLOSED) {
+        this.emit(ROOM.ROOM_EVENTS.ROOM_CLOSED, payload || {});
+      }
+    }
+
+    extractRoomStatePayload(payload) {
+      const roomPayload = payload && payload.room ? payload.room : payload;
+      const normalizedRoom = this.normalizeIncomingRoom(roomPayload);
+      if (payload && payload.lastAction && !normalizedRoom.lastAction) {
+        normalizedRoom.lastAction = payload.lastAction;
+      }
+      return normalizedRoom;
+    }
+
+    normalizeIncomingRoom(room) {
+      const players = Array.isArray(room && room.players) ? room.players : [];
+      const phase = room && room.phase ? room.phase : ROOM.ROOM_PHASES.WAITING;
+      const started = !!((room && room.gameStarted) || phase === ROOM.ROOM_PHASES.PLAYING || room && room.startedAt);
+      return {
+        roomCode: room && room.roomCode ? room.roomCode : this.roomCode,
+        hostId: room && room.hostId ? room.hostId : null,
+        phase,
+        maxPlayers: room && room.maxPlayers ? room.maxPlayers : this.session.maxPlayers,
+        gameStarted: started,
+        settings: ROOM.normalizeRoomSettings(room && room.settings),
+        players: players.map((player) => this.normalizeIncomingPlayer(player, room && room.hostId)),
+        lastAction: room && room.lastAction ? room.lastAction : null,
+      };
+    }
+
+    normalizeIncomingPlayer(player, hostId) {
+      const safePlayer = player && typeof player === 'object' ? player : {};
+      return {
+        id: safePlayer.id || null,
+        name: safePlayer.name || 'Player',
+        isHost: safePlayer.isHost != null ? !!safePlayer.isHost : safePlayer.id === hostId,
+        isReady: safePlayer.isReady != null ? !!safePlayer.isReady : !!safePlayer.ready,
+        status: safePlayer.status || 'connected',
+      };
+    }
   }
 
   function createTransport(session) {
-    // For this phase we always use the local-dev transport so same-machine testing
-    // works even when future hub-style URLs already include a ws parameter.
-    // The WebSocket transport class is intentionally kept here for a later swap-in.
+    if (session && session.wsUrl && typeof window.WebSocket === 'function') {
+      return new WebSocketRoomTransport(session);
+    }
     return new LocalDevRoomTransport(session);
   }
 
