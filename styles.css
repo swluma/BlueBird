@@ -259,7 +259,7 @@ a{color:inherit}
 .roomCodeBlock{
   display:flex;
   align-items:center;
-  justify-content:space-between;
+  justify-content:flex-start;
   gap:14px;
   padding:12px;
   border-radius:8px;
@@ -267,16 +267,16 @@ a{color:inherit}
   background:#00000014;
   margin-bottom:10px;
 }
-.roomCodeBlock span,
-.roomMetaLine{
+.roomCodeBlock span{
   color:var(--muted);
   font-size:12px;
+  flex:0 0 auto;
 }
 .roomCodeCopy{
-  display:flex;
+  display:inline-flex;
   align-items:center;
-  justify-content:flex-end;
-  gap:8px;
+  justify-content:flex-start;
+  gap:6px;
   min-width:0;
 }
 .roomCodeCopy b{
@@ -284,16 +284,6 @@ a{color:inherit}
   letter-spacing:1px;
   color:var(--text);
   overflow-wrap:anywhere;
-}
-.roomMetaLine{
-  display:flex;
-  align-items:center;
-  gap:14px;
-  flex-wrap:wrap;
-  margin-bottom:10px;
-}
-.roomMetaLine b{
-  color:var(--text);
 }
 .roomPlayers{
   display:flex;
