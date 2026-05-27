@@ -257,42 +257,42 @@ a{color:inherit}
   flex-wrap:wrap;
 }
 .roomCodeBlock{
-  display:flex;
+  display:inline-flex;
   align-items:center;
   justify-content:flex-start;
-  gap:14px;
+  gap:10px;
   padding:12px;
   border-radius:8px;
   border:1px solid #ffffff18;
   background:#00000014;
   margin-bottom:10px;
+  max-width:100%;
 }
 .roomCodeBlock span{
   color:var(--muted);
   font-size:12px;
   flex:0 0 auto;
 }
-.roomCodeCopy{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:6px;
-  min-width:0;
-  flex:1;
-}
-.roomCodeCopy .tinyBtn{
-  position:static;
-  top:auto;
-  right:auto;
-  z-index:auto;
-  flex:0 0 auto;
-  margin-left:auto;
-}
-.roomCodeCopy b{
+.roomCodeBlock b{
   user-select:text;
   letter-spacing:1px;
   color:var(--text);
   overflow-wrap:anywhere;
+  min-width:0;
+}
+.roomCopyCodeBtn{
+  border:1px solid var(--line);
+  background:#16213fcc;
+  color:var(--text);
+  border-radius:8px;
+  padding:6px 9px;
+  font-size:12px;
+  font-weight:900;
+  cursor:pointer;
+  flex:0 0 auto;
+}
+.roomCopyCodeBtn:hover{
+  filter:brightness(1.08);
 }
 .roomPlayers{
   display:flex;
