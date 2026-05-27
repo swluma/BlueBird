@@ -69,14 +69,19 @@
     constructor(session) {
       super();
       this.session = session;
-      this.clientId = createId('client');
-      this.playerId = createId('player');
+      const identity = getStoredRemoteIdentity(session);
+      this.clientId = identity && identity.clientId ? identity.clientId : createId('client');
+      this.playerId = identity && identity.playerId ? identity.playerId : createId('player');
       this.connected = false;
       this.roomCode = session.roomCode;
       this.channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(CHANNEL_NAME) : null;
       if (this.channel) {
         this.channel.addEventListener('message', (event) => this.onBroadcast(event.data));
       }
+      persistRemoteIdentity(session, {
+        playerId: this.playerId,
+        clientId: this.clientId,
+      });
     }
 
     connect() {
@@ -148,11 +153,14 @@
     }
 
     normalizeRoomPhase(room) {
-      if (!room || room.players.length < room.maxPlayers) {
+      const connectedPlayers = room && Array.isArray(room.players)
+        ? room.players.filter((player) => player.status !== 'disconnected')
+        : [];
+      if (!room || connectedPlayers.length < room.maxPlayers) {
         return ROOM.ROOM_PHASES.WAITING;
       }
       if (room.gameStarted) return ROOM.ROOM_PHASES.PLAYING;
-      if (room.players.length >= room.maxPlayers && room.players.every((player) => player.isHost || player.isReady)) {
+      if (connectedPlayers.length >= room.maxPlayers && connectedPlayers.every((player) => player.isHost || player.isReady)) {
         return ROOM.ROOM_PHASES.READY;
       }
       return ROOM.ROOM_PHASES.WAITING;
@@ -261,7 +269,8 @@
       this.reclaimHostSlot(room, payload);
 
       const existing = room.players.find((player) => player.id === this.playerId);
-      if (!existing && room.players.length >= room.maxPlayers) {
+      const connectedPlayers = room.players.filter((player) => player.status !== 'disconnected');
+      if (!existing && connectedPlayers.length >= room.maxPlayers) {
         this.emit(ROOM.ROOM_EVENTS.ERROR, { message: 'Room is full.' });
         return;
       }
@@ -322,34 +331,19 @@
       const room = this.loadRoom(roomCode);
       if (!room) return;
 
-      const index = room.players.findIndex((player) => player.id === this.playerId);
-      if (index === -1) return;
+      const player = room.players.find((entry) => entry.id === this.playerId);
+      if (!player) return;
 
-      const [player] = room.players.splice(index, 1);
+      player.status = 'disconnected';
+      player.lastSeenAt = Date.now();
       room.updatedAt = Date.now();
-
-      if (player.id === room.hostId) {
-        if (room.players.length === 0) {
-          this.deleteRoom(roomCode);
-        } else {
-          this.broadcast(ROOM.ROOM_EVENTS.ROOM_CLOSED, {
-            roomCode,
-            message: 'The host closed the room.',
-          }, roomCode);
-          this.deleteRoom(roomCode);
-        }
-      } else if (room.players.length === 0) {
-        this.deleteRoom(roomCode);
-      } else {
-        this.resetMatchState(room);
-        room.phase = this.normalizeRoomPhase(room);
-        this.saveRoom(room);
-        this.broadcast(ROOM.ROOM_EVENTS.PLAYER_LEFT, {
-          roomCode,
-          playerId: player.id,
-        }, roomCode);
-        this.broadcast(ROOM.ROOM_EVENTS.ROOM_STATE, this.makeRoomSnapshot(room), roomCode);
-      }
+      room.phase = this.normalizeRoomPhase(room);
+      this.saveRoom(room);
+      this.broadcast(ROOM.ROOM_EVENTS.PLAYER_LEFT, {
+        roomCode,
+        playerId: player.id,
+      }, roomCode);
+      this.broadcast(ROOM.ROOM_EVENTS.ROOM_STATE, this.makeRoomSnapshot(room), roomCode);
     }
 
     handlePlayerReady(payload) {
@@ -389,11 +383,12 @@
         this.emit(ROOM.ROOM_EVENTS.ERROR, { message: 'Only the host can start the game.' });
         return;
       }
-      if (room.players.length < room.maxPlayers) {
+      const connectedPlayers = room.players.filter((player) => player.status !== 'disconnected');
+      if (connectedPlayers.length < room.maxPlayers) {
         this.emit(ROOM.ROOM_EVENTS.ERROR, { message: 'Waiting for another player.' });
         return;
       }
-      if (!room.players.every((player) => player.isHost || player.isReady)) {
+      if (!connectedPlayers.every((player) => player.isHost || player.isReady)) {
         this.emit(ROOM.ROOM_EVENTS.ERROR, { message: 'Both players must be ready.' });
         return;
       }

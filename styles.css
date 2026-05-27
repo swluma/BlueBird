@@ -263,12 +263,18 @@ a{color:inherit}
 }
 .roomFact{
   display:flex;
+  align-items:center;
   justify-content:space-between;
   gap:12px;
   padding:10px 12px;
-  border-radius:12px;
+  border-radius:8px;
   border:1px solid #ffffff18;
   background:#00000014;
+}
+.roomCodeFact b{
+  margin-left:auto;
+  user-select:text;
+  letter-spacing:1px;
 }
 .roomFact span{
   color:var(--muted);
@@ -281,18 +287,36 @@ a{color:inherit}
 }
 .roomPlayerRow{
   display:flex;
-  justify-content:space-between;
+  justify-content:flex-start;
   align-items:center;
   gap:10px;
   padding:12px;
-  border-radius:14px;
+  border-radius:8px;
   border:1px solid var(--line);
   background:#0b1020aa;
+}
+.roomPlayerRow.disconnected{
+  border-color:#ffcc6655;
+  background:#2a1d0baa;
+}
+.roomPlayerIcon{
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  flex:0 0 auto;
+  font-weight:950;
+  color:#dff3ff;
+  border:1px solid #ffffff24;
+  background:#122345;
 }
 .roomPlayerMeta{
   display:flex;
   flex-direction:column;
   gap:4px;
+  min-width:0;
+  flex:1;
 }
 .roomPlayerName{
   font-weight:800;
@@ -310,6 +334,19 @@ a{color:inherit}
 }
 .roomPlayerState.waiting{
   color:var(--muted);
+}
+.roomReadySwitch{
+  flex:0 0 auto;
+  min-width:112px;
+}
+.roomReadySwitch.ready{
+  color:var(--good);
+}
+.roomReadySwitch.waiting{
+  color:var(--danger);
+}
+.roomNotification{
+  margin-top:12px;
 }
 
 .setupActions{display:flex; gap:8px; align-items:center}
@@ -748,22 +785,24 @@ a{color:inherit}
 }
 .roomModalHead{
   margin-bottom:16px;
-}
-.roomModalTopActions{
-  display:flex;
-  align-items:flex-start;
-  gap:10px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
+  position:relative;
+  padding-right:46px;
 }
 .roomNameReadonly{
   opacity:.72;
 }
-.roomCloseBtn{
-  min-width:112px;
-  padding:12px 18px;
-  border-radius:999px;
-  box-shadow:0 10px 24px #0f5fd655;
+.roomCloseIcon{
+  position:absolute;
+  top:0;
+  right:0;
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  border:1px solid var(--line);
+  background:#16213fcc;
+  color:var(--text);
+  font-weight:950;
+  cursor:pointer;
 }
 .modalTitle{
   font-size:20px;
@@ -888,6 +927,17 @@ a{color:inherit}
   max-height: 430px;
 }
 
+@media (max-width: 720px){
+  .roomPlayerRow{
+    align-items:flex-start;
+    flex-wrap:wrap;
+  }
+  .roomReadySwitch,
+  .roomPlayerState{
+    margin-left:44px;
+  }
+}
+
 .resultSmall{font-size:14px; color:var(--muted); letter-spacing:.2px}
 .resultBig{
   font-size:40px; font-weight:1000;
@@ -920,6 +970,33 @@ a{color:inherit}
 }
 .toast.good{color:var(--good)}
 .toast.bad{color:var(--danger)}
+
+.roomLeaveBanner{
+  position:fixed;
+  left:50%;
+  top:16px;
+  transform:translate(-50%, -120%);
+  width:min(560px, calc(100vw - 28px));
+  padding:13px 16px;
+  border-radius:8px;
+  border:1px solid #ffcc6688;
+  background:#2a1d0bf2;
+  color:#ffe2a8;
+  box-shadow:0 18px 50px #00000080;
+  z-index:320;
+  pointer-events:none;
+  text-align:center;
+  font-weight:900;
+}
+.roomLeaveBanner.show{
+  animation: roomLeaveSlide 3s ease-in-out forwards;
+}
+@keyframes roomLeaveSlide{
+  0%{opacity:0; transform:translate(-50%, -120%)}
+  33%{opacity:1; transform:translate(-50%, 0)}
+  66%{opacity:1; transform:translate(-50%, 0)}
+  100%{opacity:0; transform:translate(-50%, -120%)}
+}
 
 .turnPopup{
   position:fixed;

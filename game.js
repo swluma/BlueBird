@@ -270,23 +270,23 @@
         turnTimerInput: $('#turnTimerInput'),
         timerToggleBtn: $('#timerToggleBtn'),
         extraShotToggle: $('#extraShotToggle'),
+        roomQuickReadyBtn: $('#roomQuickReadyBtn'),
         roomInfoBtn: $('#roomInfoBtn'),
         closeRoomInfoBtn: $('#closeRoomInfoBtn'),
 
         roomPanelTitle: $('#roomPanelTitle'),
         roomPanelLead: $('#roomPanelLead'),
-        roomPlayerName: $('#roomPlayerName'),
         roomCodeText: $('#roomCodeText'),
+        roomCopyCodeBtn: $('#roomCopyCodeBtn'),
         roomConnectionText: $('#roomConnectionText'),
         roomPhaseText: $('#roomPhaseText'),
         roomPlayers: $('#roomPlayers'),
         roomWaitingText: $('#roomWaitingText'),
         roomErrorNotice: $('#roomErrorNotice'),
-        roomDevNotice: $('#roomDevNotice'),
+        roomNotificationText: $('#roomNotificationText'),
         roomReadyBtn: $('#roomReadyBtn'),
         roomStartBtn: $('#roomStartBtn'),
-        roomRetryBtn: $('#roomRetryBtn'),
-        roomLocalBtn: $('#roomLocalBtn'),
+        roomReloadBtn: $('#roomReloadBtn'),
         roomLastActionText: $('#roomLastActionText'),
 
         // Setup
@@ -350,6 +350,7 @@
         exhaustHintBody: $('#exhaustHintBody'),
 
         toast: $('#toast'),
+        roomLeaveBanner: $('#roomLeaveBanner'),
         turnPopup: $('#turnPopup'),
         hintOutcomePopup: $('#hintOutcomePopup'),
         hintOutcomeTitle: $('#hintOutcomeTitle'),
@@ -373,12 +374,13 @@
       this.els.p2NameInput.addEventListener('change', () => this.commitRoomPlayerName(1));
       this.els.p1NameInput.addEventListener('blur', () => this.commitRoomPlayerName(0));
       this.els.p2NameInput.addEventListener('blur', () => this.commitRoomPlayerName(1));
+      this.els.roomQuickReadyBtn.addEventListener('click', () => this.toggleRoomReady());
       this.els.roomInfoBtn.addEventListener('click', () => this.openRoomModal());
       this.els.closeRoomInfoBtn.addEventListener('click', () => this.closeRoomModal());
+      this.els.roomCopyCodeBtn.addEventListener('click', () => this.copyRoomCode());
       this.els.roomReadyBtn.addEventListener('click', () => this.toggleRoomReady());
       this.els.roomStartBtn.addEventListener('click', () => this.startRoomMatch());
-      this.els.roomRetryBtn.addEventListener('click', () => this.retryRoomConnection());
-      this.els.roomLocalBtn.addEventListener('click', () => this.continueInLocalMode('Room mode cancelled by user.'));
+      this.els.roomReloadBtn.addEventListener('click', () => this.reloadRoom());
       this.els.randomBtn.addEventListener('click', () => this.randomPlace());
       this.els.resetBtn.addEventListener('click', () => this.resetPlacement());
       this.els.lockInBtn.addEventListener('click', () => this.lockIn());
@@ -500,6 +502,7 @@
       this.roomLaunchConsumed = false;
       this.lastAppliedRemoteActionAt = 0;
       this._lastTurnPopupKey = null;
+      this._lastRoomNotificationKey = '';
       this.roomWaitingOverlayOpen = false;
       if (this.session.isRoomPlay && this.session.playerName && !this.els.p1NameInput.value) {
         this.els.p1NameInput.value = this.session.playerName;
@@ -545,8 +548,12 @@
     renderRoomLaunchControls() {
       const validRoom = !!(this.session && this.session.isRoomPlay && this.session.isValid);
       this.els.roomInfoBtn.classList.toggle('hidden', !validRoom);
+      this.els.roomQuickReadyBtn.classList.toggle('hidden', !(validRoom && this.session.isGuest));
       this.els.startBtn.classList.toggle('hidden', validRoom);
       this.els.startBtn.disabled = validRoom;
+      this.els.roomQuickReadyBtn.textContent = this.roomState && this.roomState.isReady ? '✅ ready' : '❌ not ready';
+      this.els.roomQuickReadyBtn.disabled = !validRoom || !this.session.isGuest || (this.roomState && (this.roomState.roomClosed || this.roomState.gameStarted));
+      this.els.roomInfoBtn.textContent = 'Room Info';
     },
 
     renderRoomNameInputs() {
@@ -615,10 +622,13 @@
         this.roomState = nextState;
         this.applyStartConfigToControls(this.getRoomSettings());
         this.updateSessionPills();
+        this.renderRoomLaunchControls();
         this.renderRoomPanel();
+        this.renderRoomLeaveNotification();
         const nextGameStartSignal = Number(nextState.gameStartSignal || 0);
         if (nextGameStartSignal > lastGameStartSignal && !this.roomLaunchConsumed) {
           this.roomLaunchConsumed = true;
+          this.closeRoomModal();
           this.beginRoomBackedGame();
         }
         lastGameStartSignal = nextGameStartSignal;
@@ -633,20 +643,20 @@
       const state = this.roomState || RoomAPI.createInitialRoomState(this.session);
       const players = Array.isArray(state.players) ? state.players : [];
       const localPlayer = players.find((player) => player.id === state.localPlayerId) || null;
-      const everyoneReady = players.length === this.session.maxPlayers && players.every((player) => player.isHost || player.isReady);
+      const connectedPlayers = players.filter((player) => player.status !== 'disconnected');
+      const everyoneReady = connectedPlayers.length === this.session.maxPlayers && connectedPlayers.every((player) => player.isHost || player.isReady);
       const transportLabel = this.getRoomTransportLabel(state.transportKind);
+      const notification = this.getRoomNotification(state);
 
       this.els.roomPanelTitle.textContent = this.session.isHost ? 'Host Room' : 'Join Room';
       this.els.roomPanelLead.textContent = this.session.isHost
         ? `Waiting for another player to join this ${transportLabel} room.`
         : 'Joining the room and waiting for the host to start.';
-      this.els.roomDevNotice.textContent = state.transportKind === 'websocket'
-        ? 'Render/WebSocket room sync is active. Keep this tab open while connected to the room.'
-        : 'Local-dev room sync is active for same-device or same-browser testing.';
-      this.els.roomPlayerName.textContent = (localPlayer && localPlayer.name) || this.session.playerName;
       this.els.roomCodeText.textContent = this.session.roomCode || '----';
       this.els.roomConnectionText.textContent = state.connectionStatus;
       this.els.roomPhaseText.textContent = state.roomPhase;
+      this.els.roomNotificationText.textContent = notification.message || 'No room notifications.';
+      this.els.roomNotificationText.classList.toggle('warn', !!notification.message);
       this.els.roomWaitingText.textContent = this.makeRoomWaitingText(state, players, everyoneReady);
       this.els.roomLastActionText.textContent = state.lastAction
         ? `Last room action: ${state.lastAction.type}`
@@ -660,6 +670,8 @@
         for (const player of players) {
           const row = el('div', 'roomPlayerRow');
           const meta = el('div', 'roomPlayerMeta');
+          const icon = el('div', 'roomPlayerIcon', player.isHost ? 'H' : 'G');
+          const isDisconnected = player.status === 'disconnected';
           const name = el('div', 'roomPlayerName', player.name);
           const sub = el(
             'div',
@@ -669,12 +681,18 @@
           const status = el(
             'div',
             `roomPlayerState ${(player.isHost || player.isReady) ? 'ready' : 'waiting'}`,
-            (player.isHost || player.isReady) ? 'READY' : 'WAITING'
+            (player.isHost || player.isReady) ? '✅ ready' : '❌ not ready'
           );
           meta.appendChild(name);
           meta.appendChild(sub);
+          row.classList.toggle('disconnected', isDisconnected);
+          row.appendChild(icon);
           row.appendChild(meta);
           row.appendChild(status);
+          if (!player.isHost && player.id === state.localPlayerId) {
+            const readySwitch = this.createRoomReadyControl(player, state);
+            row.replaceChild(readySwitch, status);
+          }
           this.els.roomPlayers.appendChild(row);
         }
       }
@@ -691,10 +709,58 @@
 
       const localReady = !!(localPlayer && (localPlayer.isHost || localPlayer.isReady));
       this.els.roomReadyBtn.classList.toggle('hidden', !!this.session.isHost);
-      this.els.roomReadyBtn.textContent = localReady ? 'Set Not Ready' : 'Ready Up';
+      this.els.roomReadyBtn.textContent = localReady ? '✅ ready' : '❌ not ready';
       this.els.roomReadyBtn.disabled = !!this.session.isHost || !!state.roomClosed || state.gameStarted || state.connectionStatus === RoomAPI.CONNECTION_STATUS.ERROR;
+      this.els.roomStartBtn.classList.toggle('hidden', !this.session.isHost);
       this.els.roomStartBtn.disabled = !this.session.isHost || !everyoneReady || !!state.gameStarted || !!state.roomClosed;
       this.renderRoomNameInputs();
+    },
+
+    createRoomReadyControl(player, state) {
+      const btn = el('button', `btn roomReadySwitch ${player.isReady ? 'ready' : 'waiting'}`, player.isReady ? '✅ ready' : '❌ not ready');
+      btn.type = 'button';
+      btn.disabled = !!state.roomClosed || state.gameStarted || state.connectionStatus === RoomAPI.CONNECTION_STATUS.ERROR;
+      btn.addEventListener('click', () => this.toggleRoomReady());
+      return btn;
+    },
+
+    getRoomNotification(state = this.roomState) {
+      if (!state || !this.session || !this.session.isRoomPlay) return { key: '', message: '' };
+      if (state.roomClosed || state.connectionStatus === RoomAPI.CONNECTION_STATUS.ERROR) {
+        const message = state.lastError || 'Room connection was interrupted.';
+        return { key: `error:${message}`, message };
+      }
+      const disconnected = (Array.isArray(state.players) ? state.players : [])
+        .filter((player) => player.status === 'disconnected');
+      if (!disconnected.length) return { key: '', message: '' };
+      const names = disconnected.map((player) => player.name || (player.isHost ? 'Host' : 'Guest')).join(', ');
+      return {
+        key: disconnected.map((player) => `${player.id}:${player.status}`).sort().join('|'),
+        message: `${names} left the room. Waiting for them to reconnect.`,
+      };
+    },
+
+    renderRoomLeaveNotification() {
+      if (!this.els.roomLeaveBanner) return;
+      const notification = this.getRoomNotification();
+      if (!notification.message) {
+        this.els.roomLeaveBanner.classList.add('hidden');
+        this.els.roomLeaveBanner.classList.remove('show');
+        this._lastRoomNotificationKey = '';
+        return;
+      }
+      if (notification.key === this._lastRoomNotificationKey) return;
+      this._lastRoomNotificationKey = notification.key;
+      const banner = this.els.roomLeaveBanner;
+      banner.textContent = notification.message;
+      banner.classList.remove('hidden', 'show');
+      void banner.offsetWidth;
+      banner.classList.add('show');
+      clearTimeout(this._roomLeaveBannerT);
+      this._roomLeaveBannerT = setTimeout(() => {
+        banner.classList.remove('show');
+        banner.classList.add('hidden');
+      }, 3100);
     },
 
     getRoomTransportLabel(kind) {
@@ -704,7 +770,7 @@
     },
 
     makeRoomWaitingText(state, players, everyoneReady) {
-      if (state.roomClosed) return 'The room was closed. Continue locally or reload.';
+      if (state.roomClosed) return 'The room was closed. Reload to reconnect.';
       if (state.connectionStatus === RoomAPI.CONNECTION_STATUS.ERROR) return state.lastError || 'Room connection failed.';
       if (state.connectionStatus === RoomAPI.CONNECTION_STATUS.CONNECTING) {
         return state.transportKind === 'websocket'
@@ -712,9 +778,10 @@
           : 'Connecting to local-dev room transport...';
       }
       if (state.gameStarted) {
-        return 'This room already signalled a match. Reload stays in room setup; use Room Info or Retry to reconnect instead of jumping into ship placement.';
+        return 'This room already signalled a match.';
       }
-      if (players.length < this.session.maxPlayers) return 'Waiting for opponent...';
+      const connectedPlayers = players.filter((player) => player.status !== 'disconnected');
+      if (connectedPlayers.length < this.session.maxPlayers) return 'Waiting for opponent...';
       if (!everyoneReady) return this.session.isHost ? 'Waiting for the opponent to ready up before the match can start.' : 'Waiting for both players to become ready.';
       return this.session.isHost ? 'Room is ready. Start the match when you want.' : 'Room is ready. Waiting for host to start.';
     },
@@ -724,16 +791,24 @@
       this.roomClient.toggleReady(!this.roomState.isReady);
     },
 
+    async copyRoomCode() {
+      const code = this.session && this.session.roomCode ? this.session.roomCode : '';
+      if (!code) return;
+      try {
+        await navigator.clipboard.writeText(code);
+        this.els.roomLastActionText.textContent = 'Room code copied.';
+      } catch (_error) {
+        this.els.roomLastActionText.textContent = `Room code: ${code}`;
+      }
+    },
+
     startRoomMatch() {
       if (!this.roomClient) return;
+      this.closeRoomModal();
       this.roomClient.startGame();
     },
 
-    retryRoomConnection() {
-      if (!this.session.isRoomPlay || !this.session.isValid) {
-        this.continueInLocalMode('Retry was not possible. Switched to local mode.');
-        return;
-      }
+    reloadRoom() {
       window.location.reload();
     },
 
@@ -761,6 +836,10 @@
         playerNames,
         roomSession: this.session,
       });
+      const lastAction = this.roomState && this.roomState.lastAction;
+      if (lastAction && lastAction.payload && lastAction.payload.syncState) {
+        this.applyRemoteSyncState(lastAction.payload.syncState);
+      }
     },
 
     getRoomPlayerNames() {

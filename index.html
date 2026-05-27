@@ -67,6 +67,7 @@
         </div>
         <div class="footerRow startActions">
           <button class="btn primary" id="startBtn">Start</button>
+          <button class="btn hidden" id="roomQuickReadyBtn" type="button">❌ not ready</button>
           <button class="btn hidden" id="roomInfoBtn" type="button">Room Info</button>
         </div>
         <p class="tiny muted">
@@ -256,23 +257,22 @@
             <div class="modalTitle" id="roomPanelTitle">Room Session</div>
             <p class="muted" id="roomPanelLead">Preparing room connection.</p>
           </div>
-          <div class="roomModalTopActions">
-            <button class="btn primary roomCloseBtn" id="closeRoomInfoBtn" type="button">Close</button>
-          </div>
+          <button class="roomCloseIcon" id="closeRoomInfoBtn" type="button" aria-label="Close room panel">✖</button>
         </div>
 
         <div class="roomLayout">
           <div class="card panelCard">
             <div class="cardTitle">Session</div>
             <div class="roomFacts">
-              <div class="roomFact"><span>Player</span><b id="roomPlayerName">Player</b></div>
-              <div class="roomFact"><span>Room</span><b id="roomCodeText">----</b></div>
+              <div class="roomFact roomCodeFact">
+                <span>Room code</span>
+                <b id="roomCodeText">----</b>
+                <button class="btn tinyBtn" id="roomCopyCodeBtn" type="button">Copy</button>
+              </div>
               <div class="roomFact"><span>Connection</span><b id="roomConnectionText">Connecting...</b></div>
               <div class="roomFact"><span>Phase</span><b id="roomPhaseText">connecting</b></div>
             </div>
-            <div class="notice info" id="roomDevNotice">
-              Local-dev transport is active. Room lifecycle is testable now; full authoritative gameplay sync remains a follow-up.
-            </div>
+            <div class="notice info roomNotification" id="roomNotificationText">No room notifications.</div>
           </div>
 
           <div class="card panelCard">
@@ -288,8 +288,7 @@
           <div class="roomButtons">
             <button class="btn" id="roomReadyBtn" type="button">Ready Up</button>
             <button class="btn primary" id="roomStartBtn" type="button" disabled>Start Match</button>
-            <button class="btn" id="roomRetryBtn" type="button">Retry</button>
-            <button class="btn danger" id="roomLocalBtn" type="button">Continue In Local Mode</button>
+            <button class="btn" id="roomReloadBtn" type="button">Reload</button>
           </div>
           <div class="muted tiny" id="roomLastActionText">No room actions yet.</div>
         </div>
@@ -547,6 +546,7 @@
 
     <!-- TOAST / FX -->
     <div class="toast hidden" id="toast"></div>
+    <div class="roomLeaveBanner hidden" id="roomLeaveBanner" aria-live="assertive"></div>
     <div class="turnPopup hidden" id="turnPopup" aria-live="polite"></div>
     <div class="hintOutcomePopup hidden" id="hintOutcomePopup" aria-live="assertive">
       <div class="title" id="hintOutcomeTitle">Hint Revealed</div>
