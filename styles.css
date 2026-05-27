@@ -294,6 +294,11 @@ a{color:inherit}
 .roomCopyCodeBtn:hover{
   filter:brightness(1.08);
 }
+.roomCopyCodeBtn.copied{
+  border-color:#65d98288;
+  background:#12351fcc;
+  color:var(--good);
+}
 .roomPlayers{
   display:flex;
   flex-direction:column;

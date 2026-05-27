@@ -657,7 +657,9 @@
       this.els.roomPhaseText.textContent = state.roomPhase;
       this.els.roomNotificationText.textContent = notification.message || 'No room notifications.';
       this.els.roomNotificationText.classList.toggle('warn', !!notification.message);
-      this.els.roomWaitingText.textContent = this.makeRoomWaitingText(state, players, everyoneReady);
+      this.els.roomWaitingText.textContent = notification.message && state.connectionStatus === RoomAPI.CONNECTION_STATUS.ERROR
+        ? ''
+        : this.makeRoomWaitingText(state, players, everyoneReady);
       this.els.roomLastActionText.textContent = state.lastAction
         ? `Last room action: ${state.lastAction.type}`
         : 'No room actions yet.';
@@ -697,15 +699,8 @@
         }
       }
 
-      const showError = !!state.lastError;
-      this.els.roomErrorNotice.classList.toggle('hidden', !showError);
-      this.els.roomErrorNotice.classList.remove('warn', 'error', 'info');
-      if (showError) {
-        this.els.roomErrorNotice.classList.add('error');
-        this.els.roomErrorNotice.textContent = state.lastError;
-      } else {
-        this.els.roomErrorNotice.textContent = '';
-      }
+      this.els.roomErrorNotice.classList.add('hidden');
+      this.els.roomErrorNotice.textContent = '';
 
       const localReady = !!(localPlayer && (localPlayer.isHost || localPlayer.isReady));
       this.els.roomReadyBtn.classList.toggle('hidden', !!this.session.isHost);
@@ -795,11 +790,42 @@
       const code = this.session && this.session.roomCode ? this.session.roomCode : '';
       if (!code) return;
       try {
-        await navigator.clipboard.writeText(code);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(code);
+        } else {
+          this.copyRoomCodeWithFallback(code);
+        }
+        this.showRoomCopyFeedback('Copied');
         this.els.roomLastActionText.textContent = 'Room code copied.';
       } catch (_error) {
+        this.showRoomCopyFeedback('Copy failed');
         this.els.roomLastActionText.textContent = `Room code: ${code}`;
       }
+    },
+
+    copyRoomCodeWithFallback(code) {
+      const input = document.createElement('textarea');
+      input.value = code;
+      input.setAttribute('readonly', '');
+      input.style.position = 'fixed';
+      input.style.opacity = '0';
+      document.body.appendChild(input);
+      input.select();
+      const copied = document.execCommand('copy');
+      document.body.removeChild(input);
+      if (!copied) throw new Error('Copy command failed.');
+    },
+
+    showRoomCopyFeedback(label) {
+      const btn = this.els.roomCopyCodeBtn;
+      if (!btn) return;
+      clearTimeout(this._roomCopyFeedbackT);
+      btn.textContent = label;
+      btn.classList.toggle('copied', label === 'Copied');
+      this._roomCopyFeedbackT = setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+      }, 1400);
     },
 
     startRoomMatch() {
