@@ -145,7 +145,7 @@ a{color:inherit}
 }
 .setupGrid{grid-template-columns: 340px 1fr}
 .playGrid{grid-template-columns: 1fr minmax(260px, 320px) 1fr; align-items:start}
-.roomLayout{display:grid; gap:14px; grid-template-columns: minmax(260px, 360px) 1fr}
+.roomLayout{display:grid; gap:14px; grid-template-columns: 1fr}
 
 @media (max-width: 980px){
   .setupGrid{grid-template-columns: 1fr}
@@ -256,29 +256,44 @@ a{color:inherit}
   gap:8px;
   flex-wrap:wrap;
 }
-.roomFacts{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-.roomFact{
+.roomCodeBlock{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:12px;
-  padding:10px 12px;
+  gap:14px;
+  padding:12px;
   border-radius:8px;
   border:1px solid #ffffff18;
   background:#00000014;
+  margin-bottom:10px;
 }
-.roomCodeFact b{
-  margin-left:auto;
-  user-select:text;
-  letter-spacing:1px;
-}
-.roomFact span{
+.roomCodeBlock span,
+.roomMetaLine{
   color:var(--muted);
   font-size:12px;
+}
+.roomCodeCopy{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  min-width:0;
+}
+.roomCodeCopy b{
+  user-select:text;
+  letter-spacing:1px;
+  color:var(--text);
+  overflow-wrap:anywhere;
+}
+.roomMetaLine{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  flex-wrap:wrap;
+  margin-bottom:10px;
+}
+.roomMetaLine b{
+  color:var(--text);
 }
 .roomPlayers{
   display:flex;
@@ -346,7 +361,7 @@ a{color:inherit}
   color:var(--danger);
 }
 .roomNotification{
-  margin-top:12px;
+  margin:0 0 14px;
 }
 
 .setupActions{display:flex; gap:8px; align-items:center}

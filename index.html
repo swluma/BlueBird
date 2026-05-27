@@ -260,21 +260,20 @@
           <button class="roomCloseIcon" id="closeRoomInfoBtn" type="button" aria-label="Close room panel">✖</button>
         </div>
 
-        <div class="roomLayout">
-          <div class="card panelCard">
-            <div class="cardTitle">Session</div>
-            <div class="roomFacts">
-              <div class="roomFact roomCodeFact">
-                <span>Room code</span>
-                <b id="roomCodeText">----</b>
-                <button class="btn tinyBtn" id="roomCopyCodeBtn" type="button">Copy</button>
-              </div>
-              <div class="roomFact"><span>Connection</span><b id="roomConnectionText">Connecting...</b></div>
-              <div class="roomFact"><span>Phase</span><b id="roomPhaseText">connecting</b></div>
-            </div>
-            <div class="notice info roomNotification" id="roomNotificationText">No room notifications.</div>
+        <div class="roomCodeBlock">
+          <span>Room code</span>
+          <div class="roomCodeCopy">
+            <b id="roomCodeText">----</b>
+            <button class="btn tinyBtn" id="roomCopyCodeBtn" type="button">Copy</button>
           </div>
+        </div>
+        <div class="roomMetaLine">
+          <span>Connection: <b id="roomConnectionText">Connecting...</b></span>
+          <span>Phase: <b id="roomPhaseText">connecting</b></span>
+        </div>
+        <div class="notice info roomNotification" id="roomNotificationText">No room notifications.</div>
 
+        <div class="roomLayout">
           <div class="card panelCard">
             <div class="cardTitle">Players</div>
             <div class="roomPlayers" id="roomPlayers"></div>
